@@ -458,656 +458,124 @@
     </footer>
 
 
-    <script>
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ URL ของ GOOGLE APPS SCRIPT WEB APP ★★★
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMjOGrKm39x6fOH8ciiB-9ikBQlElOyUEUCx_fxbxHSO5aW9meiE7ZZBz_i9wvhdWb/exec';
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    <script>// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ URL ของ GOOGLE APPS SCRIPT WEB APP ★★★
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMjOGrKm39x6fOH8ciiB-9ikBQlElOyUEUCx_fxbxHSO5aW9meiE7ZZBz_i9wvhdWb/exec';
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-
-        // (REMOVED) ข้อมูลล็อกอิน (ย้ายไป GSheet)
-        // const ADMIN_USERNAME = "Admin";
-        // const ADMIN_PASSWORD = "admin123456";
-
-        // -----------------------------------------------------------------
-        // (FIX) - ย้ายตัวแปรสถานะส่วนกลางไว้นอก DOMContentLoaded
-        // -----------------------------------------------------------------
-        let selectedFile = null;
-        let statsChartInstance = null; // Chart instance remains global
-        let mockStatsData = {}; // จะถูกเติมจาก fetch
-
-
-        // -----------------------------------------------------------------
-        // (FIX) - รวบโค้ดทั้งหมดที่เข้าถึง DOM ไว้ใน DOMContentLoaded
-        // -----------------------------------------------------------------
-        document.addEventListener('DOMContentLoaded', () => {
+// ฟังก์ชันเรียกใช้ Google Apps Script แบบ JSONP (สำหรับ GET requests)
+function callGASJsonp(action, payload = {}) {
+    return new Promise((resolve, reject) => {
+        // สร้าง callback name ที่ unique
+        const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+        
+        // สร้าง URL
+        const params = new URLSearchParams({
+            ...payload,
+            action: action,
+            callback: callbackName
+        });
+        
+        const url = GOOGLE_SCRIPT_URL + '?' + params.toString();
+        
+        // สร้าง script element
+        const script = document.createElement('script');
+        script.src = url;
+        
+        // กำหนด global callback function
+        window[callbackName] = function(data) {
+            // ล้างทรัพยากร
+            delete window[callbackName];
+            document.body.removeChild(script);
             
-            // องค์ประกอบ DOM
-            const dashboardPage = document.getElementById('dashboardPage');
-            const loginModal = document.getElementById('loginModal');
-            const adminDashboard = document.getElementById('adminDashboard');
-            const adminLoginBtn = document.getElementById('adminLoginBtn');
-            const cancelLogin = document.getElementById('cancelLogin');
-            const loginForm = document.getElementById('loginForm');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const adminSearchTab = document.getElementById('adminSearchTab');
-            const adminUploadTab = document.getElementById('adminUploadTab');
-            const adminSearchSection = document.getElementById('adminSearchSection');
-            const adminUploadSection = document.getElementById('adminUploadSection');
-            const adminFileDropArea = document.getElementById('adminFileDropArea');
-            const adminFileInput = document.getElementById('adminFileInput');
-            const adminFileName = document.getElementById('adminFileName');
-            const adminActionNotify = document.getElementById('adminActionNotify');
-            const adminActionPublicize = document.getElementById('adminActionPublicize');
-            const adminRelatedPersonsGroup = document.getElementById('adminRelatedPersonsGroup');
-            const adminUploadForm = document.getElementById('adminUploadForm');
-            const adminUploadSubmitBtn = document.getElementById('adminUploadSubmitBtn');
-
-            // (NEW) องค์ประกอบ DOM เปลี่ยนรหัสผ่าน
-            const adminChangePasswordTab = document.getElementById('adminChangePasswordTab');
-            const adminChangePasswordSection = document.getElementById('adminChangePasswordSection');
-            const changePasswordForm = document.getElementById('changePasswordForm');
-            const changePasswordSubmitBtn = document.getElementById('changePasswordSubmitBtn');
-
-            // องค์ประกอบสถิติ (หน้าหลัก)
-            const publicStatsSection = document.getElementById('publicStatsSection');
-            const publicYear1Select = document.getElementById('publicYear1Select');
-            const publicYear2Select = document.getElementById('publicYear2Select');
-            const publicUpdateStatsBtn = document.getElementById('publicUpdateStatsBtn');
-            const publicMonthlyStatsChart = document.getElementById('publicMonthlyStatsChart');
-
-            // องค์ประกอบ Modal แจ้งเตือน
-            const customAlertModal = document.getElementById('customAlertModal');
-            const customAlertTitle = document.getElementById('customAlertTitle');
-            const customAlertMessage = document.getElementById('customAlertMessage');
-            const customAlertCloseBtn = document.getElementById('customAlertCloseBtn');
-
-            // องค์ประกอบ Modal ผลการค้นหา
-            const searchResultModal = document.getElementById('searchResultModal');
-            const searchResultTitle = document.getElementById('searchResultTitle');
-            const searchResultList = document.getElementById('searchResultList');
-            const searchResultCloseBtn = document.getElementById('searchResultCloseBtn');
-            const searchResultCloseBtnBottom = document.getElementById('searchResultCloseBtnBottom');
-
-            // องค์ประกอบ Loading Modal
-            const loadingModal = document.getElementById('loadingModal');
-
-
-            // --- Loading Modal Functions ---
-            function showLoading() {
-                loadingModal.classList.remove('hidden');
+            // คืนค่า result
+            resolve(data);
+        };
+        
+        // ตั้งค่า error handling
+        script.onerror = function() {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            reject(new Error('JSONP request failed'));
+        };
+        
+        // เพิ่ม script ไปยัง document
+        document.body.appendChild(script);
+        
+        // ตั้งค่า timeout
+        setTimeout(() => {
+            if (window[callbackName]) {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                reject(new Error('JSONP timeout'));
             }
-            function hideLoading() {
-                loadingModal.classList.add('hidden');
-            }
+        }, 15000);
+    });
+}
 
-            // --- Custom Alert Function ---
-            function showAlert(message, title = 'ข้อความ') {
-                customAlertTitle.textContent = title;
-                customAlertMessage.textContent = message;
-                customAlertModal.classList.remove('hidden');
-            }
-            customAlertCloseBtn.addEventListener('click', function() {
-                customAlertModal.classList.add('hidden');
-            });
-            // --- End Custom Alert ---
+// ฟังก์ชันเรียกใช้สำหรับ POST requests
+async function callGASPost(action, payload = {}) {
+    showLoading();
+    
+    try {
+        // สำหรับ POST requests ใช้ JSONP โดยเพิ่ม callback parameter
+        const result = await callGASJsonp(action, payload);
+        hideLoading();
+        return result;
+    } catch (error) {
+        hideLoading();
+        throw new Error(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
+    }
+}
 
-            // --- Search Result Modal Functions ---
-            function closeSearchResultModal() {
-                searchResultModal.classList.add('hidden');
-            }
-
-            searchResultCloseBtn.addEventListener('click', closeSearchResultModal);
-            searchResultCloseBtnBottom.addEventListener('click', closeSearchResultModal);
+// ฟังก์ชันสำหรับดึงข้อมูลสถิติ
+async function updateStatsData() {
+    try {
+        const result = await callGASJsonp('stats');
+        
+        if (result.success) {
+            mockStatsData = result.data;
             
-            // ฟังก์ชันสำหรับปุ่ม "ดูไฟล์"
-            function viewFile(fileUrl) {
-                closeSearchResultModal(); // ปิด Modal ค้นหา
-                if (fileUrl && fileUrl !== 'null' && fileUrl !== 'undefined') {
-                    // เปิดไฟล์ในแท็บใหม่
-                    window.open(fileUrl, '_blank');
-                } else {
-                    showAlert('ไม่พบลิงก์ไฟล์', 'ข้อผิดพลาด');
-                }
-            }
-
-            // ฟังก์ชันค้นหาหลัก
-            async function performSearch(searchInput, searchType) {
-                if (!searchInput) {
-                    showAlert('กรุณากรอกคำค้นหา');
-                    return;
-                }
-
-                if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
-                    showAlert('ข้อผิดพลาด: ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL', 'ยังไม่ได้ตั้งค่าระบบ');
-                    return;
-                }
-
-                showLoading();
-                
-                try {
-                    // สร้าง URL สำหรับ GScript doGet
-                    const url = new URL(GOOGLE_SCRIPT_URL);
-                    url.searchParams.append('action', 'search');
-                    url.searchParams.append('query', searchInput);
-                    url.searchParams.append('type', searchType); // ส่งประเภทการค้นหาไปด้วย
-
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        redirect: 'follow'
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-
-                    const result = await response.json();
-                    hideLoading();
-
-                    if (result.success) {
-                        const results = result.data;
-                        
-                        // Clear previous results
-                        searchResultList.innerHTML = '';
-
-                        if (results.length > 0) {
-                            // พบข้อมูล
-                            searchResultTitle.textContent = `พบ ${results.length} รายการ`;
-                            
-                            results.forEach(doc => {
-                                const resultItem = document.createElement('div');
-                                resultItem.className = 'p-4 mb-3 bg-white bg-opacity-50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
-                                
-                                // ใช้ข้อมูลจริงจาก GSheet
-                                const docNo = doc['เลขที่หนังสือราชการ'] || 'N/A';
-                                const title = doc['ชื่อเรื่อง'] || 'N/A';
-                                // แปลง Date object (ถ้ามี)
-                                let date = doc['วันที่อัพโหลด'] ? new Date(doc['วันที่อัพโหลด']).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
-
-                                const fileUrl = doc['ลิงก์ไฟล์'] || null;
-
-                                resultItem.innerHTML = `
-                                    <div class="flex-1">
-                                        <p class="font-semibold text-indigo-800">${docNo}</p>
-                                        <p class="text-gray-700">${title}</p>
-                                        <p class="text-gray-500 text-sm mt-1">${date}</p>
-                                    </div>
-                                    <button onclick="viewFile('${fileUrl}')" class="btn-primary text-white px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap w-full sm:w-auto" ${!fileUrl ? 'disabled' : ''}>
-                                        ดูไฟล์
-                                    </button>
-                                `;
-                                searchResultList.appendChild(resultItem);
-                            });
-                            
-                        } else {
-                            // ไม่พบข้อมูล
-                            searchResultTitle.textContent = 'ผลการค้นหา';
-                            searchResultList.innerHTML = '<p class="text-gray-700 text-center">ไม่พบหนังสือในระบบ</p>';
-                        }
-
-                        // Show the result modal
-                        searchResultModal.classList.remove('hidden');
-
-                    } else {
-                        throw new Error(result.error || 'ไม่สามารถค้นหาข้อมูลได้');
-                    }
-
-                } catch (error) {
-                    hideLoading();
-                    showAlert(`เกิดข้อผิดพลาดในการค้นหา: ${error.message}`, 'ข้อผิดพลาด');
-                }
-            }
-            // --- End Search Result ---
-
-            // --- Chart Rendering Function (หน้าหลัก) ---
-            const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-
-            function renderStatsChart() {
-                const year1 = publicYear1Select.value;
-                const year2 = publicYear2Select.value;
-
-                if (year1 === year2) {
-                    showAlert('กรุณาเลือกปีที่แตกต่างกันเพื่อเปรียบเทียบ', 'เลือกปีไม่ถูกต้อง');
-                    return;
-                }
-
-                const dataYear1 = mockStatsData[year1] || Array(12).fill(0);
-                const dataYear2 = mockStatsData[year2] || Array(12).fill(0);
-
-                if (statsChartInstance) {
-                    statsChartInstance.destroy(); // Destroy old chart instance
-                }
-
-                const ctx = publicMonthlyStatsChart.getContext('2d');
-                statsChartInstance = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: monthLabels,
-                        datasets: [
-                            {
-                                label: `พ.ศ. ${year1}`,
-                                data: dataYear1,
-                                backgroundColor: 'rgba(61, 68, 154, 0.6)', // Indigo
-                                borderColor: 'rgba(61, 68, 154, 1)',
-                                borderWidth: 1,
-                                borderRadius: 5
-                            },
-                            {
-                                label: `พ.ศ. ${year2}`,
-                                data: dataYear2,
-                                backgroundColor: 'rgba(251, 146, 60, 0.6)', // Orange
-                                borderColor: 'rgba(251, 146, 60, 1)',
-                                borderWidth: 1,
-                                borderRadius: 5
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 1
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return `${context.dataset.label}: ${context.raw} ฉบับ`;
-                                    }
-                                }
-                            }
-                        }
-                    }
+            const years = Object.keys(mockStatsData).sort((a, b) => b - a);
+            publicYear1Select.innerHTML = '';
+            publicYear2Select.innerHTML = '';
+            
+            if (years.length === 0) {
+                 // ไม่มีข้อมูลสถิติ
+                 mockStatsData = {
+                    "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                 };
+            } else {
+                years.forEach(year => {
+                    publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
+                    publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
                 });
-            }
-            
-            // ฟังก์ชันสำหรับดึงข้อมูลสถิติจาก GScript
-            async function updateStatsData() {
-                if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
-                    console.warn('GOOGLE_SCRIPT_URL is not set. Using mock data for chart.');
-                    // (สามารถใส่ mock data ที่นี่เพื่อทดสอบ)
-                    // mockStatsData = { "2567": [5, 12, ...], "2566": [3, 10, ...] };
-                    // renderStatsChart(); 
-                    return;
-                }
-
-                showLoading();
                 
-                try {
-                    const url = new URL(GOOGLE_SCRIPT_URL);
-                    url.searchParams.append('action', 'stats');
-
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        redirect: 'follow'
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-
-                    const result = await response.json();
-                    hideLoading();
-
-                    if (result.success) {
-                        mockStatsData = result.data; // อัปเดตข้อมูลสถิติจริง
-                        
-                        // อัปเดตตัวเลือก <select> ให้ตรงกับข้อมูลที่มี
-                        const years = Object.keys(mockStatsData).sort((a, b) => b - a); // เรียงจากใหม่ไปเก่า
-                        publicYear1Select.innerHTML = '';
-                        publicYear2Select.innerHTML = '';
-                        
-                        if (years.length === 0) {
-                             showAlert('ยังไม่มีข้อมูลสถิติ', 'แจ้งเตือน');
-                             return;
-                        }
-
-                        years.forEach(year => {
-                            publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
-                            publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
-                        });
-                        
-                        // ตั้งค่าเริ่มต้น
-                        if (years.length > 0) {
-                            publicYear2Select.value = years[0]; // ปีล่าสุด
-                        }
-                        if (years.length > 1) {
-                            publicYear1Select.value = years[1]; // ปีก่อนหน้า
-                        } else {
-                            publicYear1Select.value = years[0]; // ถ้ามีปีเดียว ก็เลือกปีเดียวกันไปก่อน
-                        }
-
-                        renderStatsChart(); // วาดกราฟใหม่
-                    } else {
-                        throw new Error(result.error || 'ไม่สามารถดึงข้อมูลสถิติได้');
-                    }
-                } catch (error) {
-                    hideLoading();
-                    showAlert(`เกิดข้อผิดพลาดในการโหลดสถิติ: ${error.message}`, 'ข้อผิดพลาด');
+                if (years.length > 0) {
+                    publicYear2Select.value = years[0];
                 }
-            }
-            
-            publicUpdateStatsBtn.addEventListener('click', renderStatsChart); // ปุ่มนี้แค่ re-render
-            // --- End Chart Rendering Function ---
-
-
-            // การจัดการล็อกอิน
-            adminLoginBtn.addEventListener('click', function() {
-                loginModal.classList.remove('hidden');
-            });
-
-            cancelLogin.addEventListener('click', function() {
-                loginModal.classList.add('hidden');
-            });
-
-            loginForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-                
-                if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
-                    showAlert('ข้อผิดพลาด: ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL', 'ยังไม่ได้ตั้งค่าระบบ');
-                    return;
-                }
-
-                showLoading();
-
-                try {
-                    const payload = {
-                        action: 'login',
-                        username: username,
-                        password: password
-                    };
-
-                    const response = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'text/plain;charset=utf-8',
-                        },
-                        body: JSON.stringify(payload),
-                        redirect: 'follow'
-                    });
-
-                    const result = await response.json();
-                    hideLoading();
-
-                    if (result.success) {
-                        loginModal.classList.add('hidden');
-                        dashboardPage.classList.add('hidden');
-                        adminDashboard.classList.remove('hidden');
-                        loginForm.reset();
-                    } else {
-                        showAlert(result.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'ล็อกอินไม่สำเร็จ');
-                    }
-                } catch (error) {
-                    hideLoading();
-                    showAlert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'ล็อกอินไม่สำเร็จ');
-                }
-            });
-
-            // การจัดการล็อกเอาต์
-            logoutBtn.addEventListener('click', function() {
-                adminDashboard.classList.add('hidden');
-                dashboardPage.classList.remove('hidden');
-                // โหลดสถิติหน้าหลักใหม่ เผื่อมีการอัพเดต
-                updateStatsData();
-            });
-
-            // การสลับแท็บในแดชบอร์ดผู้ดูแล
-            adminSearchTab.addEventListener('click', function() {
-                adminSearchSection.classList.remove('hidden');
-                adminUploadSection.classList.add('hidden');
-                adminChangePasswordSection.classList.add('hidden'); // (NEW)
-                
-                adminSearchTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminUploadTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminChangePasswordTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600'); // (NEW)
-            });
-
-            adminUploadTab.addEventListener('click', function() {
-                adminSearchSection.classList.add('hidden');
-                adminUploadSection.classList.remove('hidden');
-                adminChangePasswordSection.classList.add('hidden'); // (NEW)
-
-                adminUploadTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminSearchTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminChangePasswordTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600'); // (NEW)
-            });
-
-            // (NEW) การสลับแท็บเปลี่ยนรหัสผ่าน
-            adminChangePasswordTab.addEventListener('click', function() {
-                adminSearchSection.classList.add('hidden');
-                adminUploadSection.classList.add('hidden');
-                adminChangePasswordSection.classList.remove('hidden'); 
-
-                adminChangePasswordTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminSearchTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminUploadTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-            });
-
-
-            // การจัดการการอัพโหลดไฟล์
-            adminFileDropArea.addEventListener('click', () => adminFileInput.click());
-            
-            adminFileDropArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                adminFileDropArea.classList.add('active');
-            });
-            
-            adminFileDropArea.addEventListener('dragleave', () => {
-                adminFileDropArea.classList.remove('active');
-            });
-            
-            adminFileDropArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                adminFileDropArea.classList.remove('active');
-                
-                if (e.dataTransfer.files.length) {
-                    handleFileSelect(e.dataTransfer.files[0]);
-                }
-            });
-            
-            adminFileInput.addEventListener('change', (e) => {
-                if (e.target.files.length) {
-                    handleFileSelect(e.target.files[0]);
-                }
-            });
-            
-            function handleFileSelect(file) {
-                if (file.type !== 'application/pdf') {
-                    showAlert('กรุณาเลือกไฟล์ PDF เท่านั้น', 'ไฟล์ไม่ถูกต้อง');
-                    return;
-                }
-                
-                selectedFile = file;
-                adminFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`;
-            }
-
-            // Helper function to convert file to Base64
-            function fileToBase64(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = error => reject(error);
-                });
-            }
-
-
-            // การจัดการประเภทการดำเนินการ
-            function toggleRelatedPersons() {
-                if (adminActionNotify.checked) {
-                    adminRelatedPersonsGroup.style.display = 'block';
-                    document.getElementById('adminRelatedPersons').required = true;
+                if (years.length > 1) {
+                    publicYear1Select.value = years[1];
                 } else {
-                    adminRelatedPersonsGroup.style.display = 'none';
-                    document.getElementById('adminRelatedPersons').required = false;
+                    publicYear1Select.value = years[0];
                 }
             }
-            adminActionNotify.addEventListener('change', toggleRelatedPersons);
-            adminActionPublicize.addEventListener('change', toggleRelatedPersons);
-            // เรียกใช้ครั้งแรกเพื่อตั้งค่าการแสดงผล
-            
 
-
-            // (NEW) การจัดการฟอร์มเปลี่ยนรหัสผ่าน
-            changePasswordForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                const oldPassword = document.getElementById('adminOldPassword').value;
-                const newPassword = document.getElementById('adminNewPassword').value;
-                const confirmPassword = document.getElementById('adminConfirmPassword').value;
-
-                if (newPassword !== confirmPassword) {
-                    showAlert('รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน', 'ข้อผิดพลาด');
-                    return;
-                }
-
-                if (newPassword.length < 6) {
-                    showAlert('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร', 'ข้อผิดพลาด');
-                    return;
-                }
-
-                showLoading();
-                changePasswordSubmitBtn.disabled = true;
-
-                try {
-                    const payload = {
-                        action: 'changePassword',
-                        oldPassword: oldPassword,
-                        newPassword: newPassword
-                    };
-
-                    const response = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'text/plain;charset=utf-8',
-                        },
-                        body: JSON.stringify(payload),
-                        redirect: 'follow'
-                    });
-
-                    const result = await response.json();
-                    hideLoading();
-                    changePasswordSubmitBtn.disabled = false;
-
-                    if (result.success) {
-                        showAlert(result.message || 'เปลี่ยนรหัสผ่านสำเร็จ', 'สำเร็จ');
-                        changePasswordForm.reset();
-                    } else {
-                        showAlert(result.error || 'เกิดข้อผิดพลาด', 'ไม่สำเร็จ');
-                    }
-
-                } catch (error) {
-                    hideLoading();
-                    changePasswordSubmitBtn.disabled = false;
-                    showAlert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'ไม่สำเร็จ');
-                }
-            });
-
-
-            // การจัดการฟอร์มอัพโหลด
-            adminUploadForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                if (!selectedFile) {
-                    showAlert('กรุณาเลือกไฟล์ PDF', 'ข้อมูลไม่ครบถ้วน');
-                    return;
-                }
-
-                if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
-                    showAlert('ข้อผิดพลาด: ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL', 'ยังไม่ได้ตั้งค่าระบบ');
-                    return;
-                }
-
-                showLoading();
-                adminUploadSubmitBtn.disabled = true;
-
-                try {
-                    // 1. แปลงไฟล์เป็น Base64
-                    const fileData = await fileToBase64(selectedFile);
-
-                    // 2. รวบรวมข้อมูลจากฟอร์ม
-                    const payload = {
-                        action: 'uploadFile',
-                        fileName: selectedFile.name,
-                        fileData: fileData,
-                        documentNumber: document.getElementById('adminDocumentNumber').value,
-                        title: document.getElementById('adminTitle').value,
-                        details: document.getElementById('adminDetails').value,
-                        actionType: document.querySelector('input[name="adminActionType"]:checked').value,
-                        relatedPersons: document.getElementById('adminRelatedPersons').value
-                    };
-
-                    // 3. ส่งข้อมูลไป Google Apps Script (doPost)
-                    const response = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'text/plain;charset=utf-8', // GScript doPost มักจะรับ text/plain
-                        },
-                        body: JSON.stringify(payload),
-                        redirect: 'follow'
-                    });
-
-                    const result = await response.json();
-                    hideLoading();
-                    adminUploadSubmitBtn.disabled = false;
-
-                    if (result.success) {
-                        showAlert(result.message || 'อัพโหลดไฟล์และบันทึกข้อมูลสำเร็จ!', 'สำเร็จ');
-                        adminUploadForm.reset();
-                        adminFileName.textContent = '';
-                        selectedFile = null;
-                        toggleRelatedPersons(); // รีเซ็ตการแสดงผล
-                        
-                        // สลับกลับไปที่แท็บค้นหา
-                        adminSearchTab.click();
-                        
-                        // (ไม่ต้องอัปเดตสถิติที่นี่ เพราะจะอัปเดตเมื่อผู้ใช้ออกจากระบบ)
-
-                    } else {
-                        throw new Error(result.error || 'เกิดข้อผิดพลาดในการอัพโหลด');
-                    }
-
-                } catch (error) {
-                    hideLoading();
-                    adminUploadSubmitBtn.disabled = false;
-                    showAlert(`เกิดข้อผิดพลาด: ${error.message}`, 'อัพโหลดไม่สำเร็จ');
-                }
-            });
-
-            // การจัดการการค้นหาในแดชบอร์ดหลัก
-            document.getElementById('searchBtn').addEventListener('click', function() {
-                const searchInput = document.getElementById('searchInput').value;
-                const searchType = document.querySelector('input[name="searchType"]:checked').value;
-                
-                performSearch(searchInput, searchType);
-            });
-
-            // การจัดการการค้นหาในแดชบอร์ดผู้ดูแล
-            document.getElementById('adminSearchBtn').addEventListener('click', function() {
-                const searchInput = document.getElementById('adminSearchInput').value;
-                const searchType = document.querySelector('input[name="adminSearchType"]:checked').value;
-                
-                performSearch(searchInput, searchType);
-            });
-
-            // -----------------------------------------------------------------
-            // (FIX) - ย้ายการเรียกใช้ฟังก์ชันเริ่มต้นมาไว้ท้ายสุดของ Listener
-            // -----------------------------------------------------------------
-            toggleRelatedPersons();
-            updateStatsData(); // ดึงข้อมูลสถิติเมื่อ DOM โหลดเสร็จ
-
-        }); // <-- สิ้นสุด DOMContentLoaded
-    </script>
+            renderStatsChart();
+        } else {
+            throw new Error(result.error || 'ไม่สามารถดึงข้อมูลสถิติได้');
+        }
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        // ใช้ mock data สำรอง
+        mockStatsData = {
+            "2567": [5, 8, 12, 6, 9, 15, 7, 10, 8, 11, 9, 7],
+            "2566": [3, 6, 8, 4, 7, 10, 5, 8, 6, 9, 7, 5]
+        };
+        renderStatsChart();
+        showAlert(`ใช้ข้อมูลตัวอย่างเนื่องจาก: ${error.message}`, 'แจ้งเตือน');
+    }
+}</script>
 </body>
 </html>
