@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดเก็บหนังสือเข้า</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .logo-text {
+            background: linear-gradient(135deg, #3D449A 0%, #5B63D1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3D449A 0%, #5B63D1 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(61, 68, 154, 0.3);
+        }
+        .btn-primary:disabled {
+            background: #9ca3af; /* gray-400 */
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .file-drop-area {
+            transition: all 0.3s ease;
+        }
+        .file-drop-area.active {
+            border-color: #3D449A;
+            background-color: rgba(61, 68, 154, 0.05);
+        }
+        .table-row:hover {
+            background-color: rgba(61, 68, 154, 0.05);
+        }
+        /* Mobile Pagination */
+        .pagination-mobile-stack {
+            display: none;
+        }
+        @media (max-width: 640px) {
+            .pagination-full {
+                display: none;
+            }
+            .pagination-mobile-stack {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 min-h-screen bg-gradient-to-br from-pink-100 to-blue-200 antialiased">
+    <!-- หน้าแดชบอร์ดหลัก (สาธารณะ) -->
+    <div id="dashboardPage">
+        <!-- ส่วนหัว -->
+        <header class="glass mb-8 p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between">
+                <!-- Updated Logo -->
+                <div class="flex items-center justify-center mb-4 md:mb-0 md:justify-start">
+                    <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" 
+                         alt="Logo" 
+                         class="h-20 w-auto"
+                         onerror="this.src='https://placehold.co/240x80/3D449A/FFFFFF?text=WNY+App'">
+                </div>
+                <div class="flex items-center justify-center md:justify-end">
+                    <button id="adminLoginBtn" class="px-4 py-2 btn-primary text-white rounded-lg font-semibold">เข้าสู่ระบบ (ผู้ดูแล)</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ส่วนค้นหา -->
+        <div class="glass p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">ค้นหาหนังสือราชการ</h2>
+            <div class="mb-4">
+                <div class="flex flex-wrap gap-4">
+                    <div class="flex items-center">
+                        <input type="radio" id="searchByDocNo" name="searchType" value="docNo" class="mr-2" checked>
+                        <label for="searchByDocNo" class="text-gray-700">ค้นหาตามเลขที่หนังสือ</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="radio" id="searchByTitle" name="searchType" value="title" class="mr-2">
+                        <label for="searchByTitle" class="text-gray-700">ค้นหาตามชื่อเรื่อง</label>
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="text" id="searchInput" class="flex-grow px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกคำค้นหา...">
+                <button id="searchBtn" class="btn-primary text-white px-6 py-3 rounded-lg font-semibold whitespace-nowrap">ค้นหา</button>
+            </div>
+        </div>
+
+        <!-- ตารางผลการค้นหา -->
+        <div class="glass p-6 mb-8"> 
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">รายการหนังสือราชการ</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b-2 border-gray-200">
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">เลขที่หนังสือ</th>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">ชื่อเรื่อง</th>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">วันที่</th>
+                            <th class="py-3 px-4 text-left font-semibold text-gray-700">การดำเนินการ</th>
+                            <th class="py-3 px-4 text-center font-semibold text-gray-700">ไฟล์</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- MOCK DATA REMOVED (8 <tr> blocks) -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- ตัวแบ่งหน้า (REMOVED) -->
+        </div>
+
+        <!-- สถิติ (ย้ายมาหน้าหลัก) -->
+        <div id="publicStatsSection" class="glass p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">สถิติหนังสือเข้ารายเดือน</h2>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <label for="publicYear1Select" class="text-gray-700 whitespace-nowrap">เปรียบเทียบ:</label>
+                        <select id="publicYear1Select" class="px-3 py-2 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="2566">พ.ศ. 2566</option>
+                            <option value="2567">พ.ศ. 2567</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label for="publicYear2Select" class="text-gray-700">กับ:</label>
+                        <select id="publicYear2Select" class="px-3 py-2 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="2566">พ.ศ. 2566</option>
+                            <option value="2567" selected>พ.ศ. 2567</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="publicUpdateStatsBtn" class="btn-primary text-white px-5 py-2 rounded-lg font-semibold w-full sm:w-auto">แสดงผล</button>
+            </div>
+            <div>
+                <canvas id="publicMonthlyStatsChart" class="w-full"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- หน้าเข้าสู่ระบบผู้ดูแล (Modal) -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="w-full max-w-md mx-4">
+            <div class="glass p-8 rounded-2xl">
+                <!-- โลโก้ -->
+                <div class="text-center mb-8">
+                    <div class="flex justify-center mb-4">
+                        <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" 
+                             alt="Logo" 
+                             class="h-24 w-auto"
+                             onerror="this.src='https://placehold.co/300x100/3D449A/FFFFFF?text=WNY+App'">
+                    </div>
+                    <p class="text-gray-600 mt-2">ส่วนผู้ดูแลระบบ</p>
+                </div>
+
+                <!-- ฟอร์มล็อกอิน -->
+                <form id="loginForm">
+                    <div class="mb-6">
+                        <label for="username" class="block text-gray-700 mb-2 font-medium">ชื่อผู้ใช้</label>
+                        <input type="text" id="username" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกชื่อผู้ใช้">
+                    </div>
+                    <div class="mb-6">
+                        <label for="password" class="block text-gray-700 mb-2 font-medium">รหัสผ่าน</label>
+                        <input type="password" id="password" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกรหัสผ่าน">
+                    </div>
+                    <div class="flex space-x-4">
+                        <button type="button" id="cancelLogin" class="flex-1 px-4 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition">ยกเลิก</button>
+                        <button type="submit" class="flex-1 btn-primary text-white py-3 rounded-lg font-semibold shadow-lg">เข้าสู่ระบบ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- หน้าแดชบอร์ดผู้ดูแล -->
+    <div id="adminDashboard" class="hidden">
+        <!-- ส่วนหัว -->
+        <header class="glass mb-8 p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between">
+                <div class="flex items-center justify-center mb-4 md:mb-0 md:justify-start">
+                    <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" 
+                         alt="Logo" 
+                         class="h-20 w-auto"
+                         onerror="this.src='https://placehold.co/240x80/3D449A/FFFFFF?text=WNY+App'">
+                </div>
+                <div class="flex items-center justify-center md:justify-end">
+                    <span class="text-gray-700 mr-4 hidden sm:inline">ผู้ดูแลระบบ</span>
+                    <button id="logoutBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">ออกจากระบบ</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- เมนูด้านซ้าย -->
+            <div class="lg:col-span-1">
+                <div class="glass p-6 mb-8">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">เมนูการทำงาน</h2>
+                    <ul class="space-y-2">
+                        <li>
+                            <button id="adminSearchTab" class="w-full text-left px-4 py-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 text-indigo-600 font-medium flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                ค้นหาหนังสือ
+                            </button>
+                        </li>
+                        <li>
+                            <button id="adminUploadTab" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition text-gray-700 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                อัพโหลดหนังสือ
+                            </button>
+                        </li>
+                        <!-- (NEW) Change Password Tab -->
+                        <li>
+                            <button id="adminChangePasswordTab" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition text-gray-700 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H5v-2H3v-2H1l.007-4.243A6 6 0 017 7h8zM15 7V3m0 4H7" />
+                                </svg>
+                                เปลี่ยนรหัสผ่าน
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- สถิติ -->
+                <div class="glass p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">สถิติ (ภาพรวม)</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">หนังสือทั้งหมด</span>
+                            <span class="text-lg font-bold text-indigo-600">125</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">เพิ่มเดือนนี้</span>
+                            <span class="text-lg font-bold text-green-600">12</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">รอดำเนินการ</span>
+                            <span class="text-lg font-bold text-yellow-600">5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- เนื้อหาหลัก -->
+            <div class="lg:col-span-2">
+                <!-- ส่วนค้นหา -->
+                <div id="adminSearchSection">
+                    <div class="glass p-6 mb-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">ค้นหาหนังสือราชการ</h2>
+                        <div class="mb-4">
+                            <div class="flex flex-wrap gap-4">
+                                <div class="flex items-center">
+                                    <input type="radio" id="adminSearchByDocNo" name="adminSearchType" value="docNo" class="mr-2" checked>
+                                    <label for="adminSearchByDocNo" class="text-gray-700">ค้นหาตามเลขที่หนังสือ</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="radio" id="adminSearchByTitle" name="adminSearchType" value="title" class="mr-2">
+                                    <label for="adminSearchByTitle" class="text-gray-700">ค้นหาตามชื่อเรื่อง</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <input type="text" id="adminSearchInput" class="flex-grow px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกคำค้นหา...">
+                            <button id="adminSearchBtn" class="btn-primary text-white px-6 py-3 rounded-lg font-semibold whitespace-nowrap">ค้นหา</button>
+                        </div>
+                    </div>
+
+                    <!-- ตารางผลการค้นหา -->
+                    <div class="glass p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">รายการหนังสือราชการ (ตัวอย่าง)</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b-2 border-gray-200">
+                                        <th class="py-3 px-4 text-left font-semibold text-gray-700">เลขที่หนังสือ</th>
+                                        <th class="py-3 px-4 text-left font-semibold text-gray-700">ชื่อเรื่อง</th>
+                                        <th class="py-3 px-4 text-left font-semibold text-gray-700">วันที่</th>
+                                        <th class="py-3 px-4 text-left font-semibold text-gray-700">การดำเนินการ</th>
+                                        <th class="py-3 px-4 text-center font-semibold text-gray-700">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- MOCK DATA REMOVED (4 <tr> blocks) -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ส่วนอัพโหลด -->
+                <div id="adminUploadSection" class="hidden">
+                    <div class="glass p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6">อัพโหลดหนังสือใหม่</h2>
+                        
+                        <form id="adminUploadForm">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label for="adminDocumentNumber" class="block text-gray-700 mb-2 font-medium">เลขที่หนังสือราชการ *</label>
+                                    <input type="text" id="adminDocumentNumber" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกเลขที่หนังสือ" required>
+                                </div>
+                                <div>
+                                    <label for="adminTitle" class="block text-gray-700 mb-2 font-medium">ชื่อเรื่อง *</label>
+                                    <input type="text" id="adminTitle" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกชื่อเรื่อง" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label for="adminDetails" class="block text-gray-700 mb-2 font-medium">รายละเอียดอื่นๆ</label>
+                                <textarea id="adminDetails" rows="3" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกรายละเอียดเพิ่มเติม"></textarea>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">การดำเนินการ *</label>
+                                <div class="flex flex-wrap gap-4">
+                                    <div class="flex items-center">
+                                        <input type="radio" id="adminActionNotify" name="adminActionType" value="notify" class="mr-2" checked>
+                                        <label for="adminActionNotify" class="text-gray-700">ดำเนินการแจ้งผู้เกี่ยวข้อง</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="radio" id="adminActionPublicize" name="adminActionType" value="publicize" class="mr-2">
+                                        <label for="adminActionPublicize" class="text-gray-700">ประชาสัมพันธ์</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="adminRelatedPersonsGroup" class="mb-6">
+                                <label for="adminRelatedPersons" class="block text-gray-700 mb-2 font-medium">ระบุผู้เกี่ยวข้อง *</label>
+                                <input type="text" id="adminRelatedPersons" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกชื่อผู้เกี่ยวข้อง">
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">ไฟล์หนังสือ (PDF) *</label>
+                                <div id="adminFileDropArea" class="file-drop-area border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer transition">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p class="text-gray-600">ลากไฟล์ PDF มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                                        <p class="text-gray-400 text-sm mt-2">รองรับเฉพาะไฟล์ PDF เท่านั้น</p>
+                                    </div>
+                                    <input type="file" id="adminFileInput" class="hidden" accept=".pdf">
+                                </div>
+                                <p id="adminFileName" class="text-gray-600 mt-2 text-sm"></p>
+                            </div>
+                            
+                            <button type="submit" id="adminUploadSubmitBtn" class="w-full btn-primary text-white py-3 rounded-lg font-semibold shadow-lg">บันทึกข้อมูล</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- (NEW) ส่วนเปลี่ยนรหัสผ่าน -->
+                <div id="adminChangePasswordSection" class="hidden">
+                    <div class="glass p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-6">เปลี่ยนรหัสผ่าน</h2>
+                        
+                        <form id="changePasswordForm">
+                            <div class="mb-6">
+                                <label for="adminOldPassword" class="block text-gray-700 mb-2 font-medium">รหัสผ่านเก่า *</label>
+                                <input type="password" id="adminOldPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" required>
+                            </div>
+                            <div class="mb-6">
+                                <label for="adminNewPassword" class="block text-gray-700 mb-2 font-medium">รหัสผ่านใหม่ *</label>
+                                <input type="password" id="adminNewPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" required>
+                                <p class="text-xs text-gray-500 mt-1">แนะนำอย่างน้อย 6 ตัวอักษร</p>
+                            </div>
+                            <div class="mb-6">
+                                <label for="adminConfirmPassword" class="block text-gray-700 mb-2 font-medium">ยืนยันรหัสผ่านใหม่ *</label>
+                                <input type="password" id="adminConfirmPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" required>
+                            </div>
+                            
+                            <button type="submit" id="changePasswordSubmitBtn" class="w-full btn-primary text-white py-3 rounded-lg font-semibold shadow-lg">บันทึกรหัสผ่านใหม่</button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="customAlertModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] hidden">
+        <div class="w-full max-w-md mx-4">
+            <div class="glass p-6 rounded-2xl shadow-lg">
+                <h3 id="customAlertTitle" class="text-xl font-semibold text-gray-800 mb-4">ข้อความ</h3>
+                <p id="customAlertMessage" class="text-gray-700 mb-6">นี่คือข้อความแจ้งเตือน</p>
+                <button id="customAlertCloseBtn" class="w-full btn-primary text-white py-2 rounded-lg font-semibold">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Result Modal (NEW) -->
+    <div id="searchResultModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] hidden">
+        <div class="w-full max-w-lg mx-4">
+            <div class="glass p-6 rounded-2xl shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="searchResultTitle" class="text-xl font-semibold text-gray-800">ผลการค้นหา</h3>
+                    <button id="searchResultCloseBtn" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+                </div>
+                <!-- Content will be injected by JS -->
+                <div id="searchResultList" class="max-h-[60vh] overflow-y-auto pr-2">
+                    <!-- Example item (for structure):
+                    <div class="p-4 mb-3 bg-white bg-opacity-50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                        <div class="mb-3 sm:mb-0">
+                            <p class="font-semibold text-indigo-800">ที่ ศธ ๐๕๐๗/ว ๓๖๙</p>
+                            <p class="text-gray-700">เรื่อง การประชุมคณะกรรมการการศึกษาขั้นพื้นฐาน</p>
+                        </div>
+                        <button class="btn-primary text-white px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap">
+                            ดูไฟล์
+                        </button>
+                    </div>
+                    -->
+                </div>
+                <button id="searchResultCloseBtnBottom" class="w-full mt-6 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-400 transition">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal (NEW) -->
+    <div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200] hidden">
+        <div class="glass-dark p-8 rounded-2xl flex flex-col items-center">
+            <!-- Spinner -->
+            <svg class="animate-spin h-10 w-10 text-white mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-white text-lg font-semibold">กำลังประมวลผล...</p>
+        </div>
+    </div>
+
+    <!-- Footer (NEW) -->
+    <footer class="text-center text-sm text-gray-600 p-4 mt-8">
+        <p>จัดทำโดยกลุ่มบริหารงานบุคคล โรงเรียนวังน้ำเย็นวิทยาคม</p>
+        <p>พัฒนาระบบโดย ครูกีรติ ประสพพรรังสี</p>
+    </footer>
+
+
+    <script>
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ URL ของ GOOGLE APPS SCRIPT WEB APP ★★★
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMjOGrKm39x6fOH8ciiB-9ikBQlElOyUEUCx_fxbxHSO5aW9meiE7ZZBz_i9wvhdWb/exec';
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+
+        // (REMOVED) ข้อมูลล็อกอิน (ย้ายไป GSheet)
+        // const ADMIN_USERNAME = "Admin";
+        // const ADMIN_PASSWORD = "admin123456";
+
+        // -----------------------------------------------------------------
+        // (FIX) - ย้ายตัวแปรสถานะส่วนกลางไว้นอก DOMContentLoaded
+        // -----------------------------------------------------------------
+        let selectedFile = null;
+        let statsChartInstance = null; // Chart instance remains global
+        let mockStatsData = {}; // จะถูกเติมจาก fetch
+
+
+        // -----------------------------------------------------------------
+        // (FIX) - รวบโค้ดทั้งหมดที่เข้าถึง DOM ไว้ใน DOMContentLoaded
+        // -----------------------------------------------------------------
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // องค์ประกอบ DOM
+            const dashboardPage = document.getElementById('dashboardPage');
+            const loginModal = document.getElementById('loginModal');
+            const adminDashboard = document.getElementById('adminDashboard');
+            const adminLoginBtn = document.getElementById('adminLoginBtn');
+            const cancelLogin = document.getElementById('cancelLogin');
+            const loginForm = document.getElementById('loginForm');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const adminSearchTab = document.getElementById('adminSearchTab');
+            const adminUploadTab = document.getElementById('adminUploadTab');
+            const adminSearchSection = document.getElementById('adminSearchSection');
+            const adminUploadSection = document.getElementById('adminUploadSection');
+            const adminFileDropArea = document.getElementById('adminFileDropArea');
+            const adminFileInput = document.getElementById('adminFileInput');
+            const adminFileName = document.getElementById('adminFileName');
+            const adminActionNotify = document.getElementById('adminActionNotify');
+            const adminActionPublicize = document.getElementById('adminActionPublicize');
+            const adminRelatedPersonsGroup = document.getElementById('adminRelatedPersonsGroup');
+            const adminUploadForm = document.getElementById('adminUploadForm');
+            const adminUploadSubmitBtn = document.getElementById('adminUploadSubmitBtn');
+
+            // (NEW) องค์ประกอบ DOM เปลี่ยนรหัสผ่าน
+            const adminChangePasswordTab = document.getElementById('adminChangePasswordTab');
+            const adminChangePasswordSection = document.getElementById('adminChangePasswordSection');
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            const changePasswordSubmitBtn = document.getElementById('changePasswordSubmitBtn');
+
+            // องค์ประกอบสถิติ (หน้าหลัก)
+            const publicStatsSection = document.getElementById('publicStatsSection');
+            const publicYear1Select = document.getElementById('publicYear1Select');
+            const publicYear2Select = document.getElementById('publicYear2Select');
+            const publicUpdateStatsBtn = document.getElementById('publicUpdateStatsBtn');
+            const publicMonthlyStatsChart = document.getElementById('publicMonthlyStatsChart');
+
+            // องค์ประกอบ Modal แจ้งเตือน
+            const customAlertModal = document.getElementById('customAlertModal');
+            const customAlertTitle = document.getElementById('customAlertTitle');
+            const customAlertMessage = document.getElementById('customAlertMessage');
+            const customAlertCloseBtn = document.getElementById('customAlertCloseBtn');
+
+            // องค์ประกอบ Modal ผลการค้นหา
+            const searchResultModal = document.getElementById('searchResultModal');
+            const searchResultTitle = document.getElementById('searchResultTitle');
+            const searchResultList = document.getElementById('searchResultList');
+            const searchResultCloseBtn = document.getElementById('searchResultCloseBtn');
+            const searchResultCloseBtnBottom = document.getElementById('searchResultCloseBtnBottom');
+
+            // องค์ประกอบ Loading Modal
+            const loadingModal = document.getElementById('loadingModal');
+
+
+            // --- Loading Modal Functions ---
+            function showLoading() {
+                loadingModal.classList.remove('hidden');
+            }
+            function hideLoading() {
+                loadingModal.classList.add('hidden');
+            }
+
+            // --- Custom Alert Function ---
+            function showAlert(message, title = 'ข้อความ') {
+                customAlertTitle.textContent = title;
+                customAlertMessage.textContent = message;
+                customAlertModal.classList.remove('hidden');
+            }
+            customAlertCloseBtn.addEventListener('click', function() {
+                customAlertModal.classList.add('hidden');
+            });
+            // --- End Custom Alert ---
+
+            // --- Search Result Modal Functions ---
+            function closeSearchResultModal() {
+                searchResultModal.classList.add('hidden');
+            }
+
+            searchResultCloseBtn.addEventListener('click', closeSearchResultModal);
+            searchResultCloseBtnBottom.addEventListener('click', closeSearchResultModal);
+            
+            // ฟังก์ชันสำหรับปุ่ม "ดูไฟล์"
+            function viewFile(fileUrl) {
+                closeSearchResultModal(); // ปิด Modal ค้นหา
+                if (fileUrl && fileUrl !== 'null' && fileUrl !== 'undefined') {
+                    // เปิดไฟล์ในแท็บใหม่
+                    window.open(fileUrl, '_blank');
+                } else {
+                    showAlert('ไม่พบลิงก์ไฟล์', 'ข้อผิดพลาด');
+                }
+            }
+
+            // ฟังก์ชันค้นหาหลัก
+            async function performSearch(searchInput, searchType) {
+                if (!searchInput) {
+                    showAlert('กรุณากรอกคำค้นหา');
+                    return;
+                }
+
+                if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+                    showAlert('ข้อผิดพลาด: ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL', 'ยังไม่ได้ตั้งค่าระบบ');
+                    return;
+                }
+
+                showLoading();
+                
+                try {
+                    // สร้าง URL สำหรับ GScript doGet
+                    const url = new URL(GOOGLE_SCRIPT_URL);
+                    url.searchParams.append('action', 'search');
+                    url.searchParams.append('query', searchInput);
+                    url.searchParams.append('type', searchType); // ส่งประเภทการค้นหาไปด้วย
+
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        redirect: 'follow'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+
+                    const result = await response.json();
+                    hideLoading();
+
+                    if (result.success) {
+                        const results = result.data;
+                        
+                        // Clear previous results
+                        searchResultList.innerHTML = '';
+
+                        if (results.length > 0) {
+                            // พบข้อมูล
+                            searchResultTitle.textContent = `พบ ${results.length} รายการ`;
+                            
+                            results.forEach(doc => {
+                                const resultItem = document.createElement('div');
+                                resultItem.className = 'p-4 mb-3 bg-white bg-opacity-50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
+                                
+                                // ใช้ข้อมูลจริงจาก GSheet
+                                const docNo = doc['เลขที่หนังสือราชการ'] || 'N/A';
+                                const title = doc['ชื่อเรื่อง'] || 'N/A';
+                                // แปลง Date object (ถ้ามี)
+                                let date = doc['วันที่อัพโหลด'] ? new Date(doc['วันที่อัพโหลด']).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+
+                                const fileUrl = doc['ลิงก์ไฟล์'] || null;
+
+                                resultItem.innerHTML = `
+                                    <div class="flex-1">
+                                        <p class="font-semibold text-indigo-800">${docNo}</p>
+                                        <p class="text-gray-700">${title}</p>
+                                        <p class="text-gray-500 text-sm mt-1">${date}</p>
+                                    </div>
+                                    <button onclick="viewFile('${fileUrl}')" class="btn-primary text-white px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap w-full sm:w-auto" ${!fileUrl ? 'disabled' : ''}>
+                                        ดูไฟล์
+                                    </button>
+                                `;
+                                searchResultList.appendChild(resultItem);
+                            });
+                            
+                        } else {
+                            // ไม่พบข้อมูล
+                            searchResultTitle.textContent = 'ผลการค้นหา';
+                            searchResultList.innerHTML = '<p class="text-gray-700 text-center">ไม่พบหนังสือในระบบ</p>';
+                        }
+
+                        // Show the result modal
+                        searchResultModal.classList.remove('hidden');
+
+                    } else {
+                        throw new Error(result.error || 'ไม่สามารถค้นหาข้อมูลได้');
+                    }
+
+                } catch (error) {
+                    hideLoading();
+                    showAlert(`เกิดข้อผิดพลาดในการค้นหา: ${error.message}`, 'ข้อผิดพลาด');
+                }
+            }
+            // --- End Search Result ---
+
+            // --- Chart Rendering Function (หน้าหลัก) ---
+            const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+            function renderStatsChart() {
+                const year1 = publicYear1Select.value;
+                const year2 = publicYear2Select.value;
+
+                if (year1 === year2) {
+                    showAlert('กรุณาเลือกปีที่แตกต่างกันเพื่อเปรียบเทียบ', 'เลือกปีไม่ถูกต้อง');
+                    return;
+                }
+
+                const dataYear1 = mockStatsData[year1] || Array(12).fill(0);
+                const dataYear2 = mockStatsData[year2] || Array(12).fill(0);
+
+                if (statsChartInstance) {
+                    statsChartInstance.destroy(); // Destroy old chart instance
+                }
+
+                const ctx = publicMonthlyStatsChart.getContext('2d');
+                statsChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: monthLabels,
+                        datasets: [
+                            {
+                                label: `พ.ศ. ${year1}`,
+                                data: dataYear1,
+                                backgroundColor: 'rgba(61, 68, 154, 0.6)', // Indigo
+                                borderColor: 'rgba(61, 68, 154, 1)',
+                                borderWidth: 1,
+                                borderRadius: 5
+                            },
+                            {
+                                label: `พ.ศ. ${year2}`,
+                                data: dataYear2,
+                                backgroundColor: 'rgba(251, 146, 60, 0.6)', // Orange
+                                borderColor: 'rgba(251, 146, 60, 1)',
+                                borderWidth: 1,
+                                borderRadius: 5
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.raw} ฉบับ`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // ฟังก์ชันสำหรับดึงข้อมูลสถิติจาก GScript
+            async function updateStatsData() {
+                if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+                    console.warn('GOOGLE_SCRIPT_URL is not set. Using mock data for chart.');
+                    // (สามารถใส่ mock data ที่นี่เพื่อทดสอบ)
+                    // mockStatsData = { "2567": [5, 12, ...], "2566": [3, 10, ...] };
+                    // renderStatsChart(); 
+                    return;
+                }
+
+                showLoading();
+                
+                try {
+                    const url = new URL(GOOGLE_SCRIPT_URL);
+                    url.searchParams.append('action', 'stats');
+
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        redirect: 'follow'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+
+                    const result = await response.json();
+                    hideLoading();
+
+                    if (result.success) {
+                        mockStatsData = result.data; // อัปเดตข้อมูลสถิติจริง
+                        
+                        // อัปเดตตัวเลือก <select> ให้ตรงกับข้อมูลที่มี
+                        const years = Object.keys(mockStatsData).sort((a, b) => b - a); // เรียงจากใหม่ไปเก่า
+                        publicYear1Select.innerHTML = '';
+                        publicYear2Select.innerHTML = '';
+                        
+                        if (years.length === 0) {
+                             showAlert('ยังไม่มีข้อมูลสถิติ', 'แจ้งเตือน');
+                             return;
+                        }
+
+                        years.forEach(year => {
+                            publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
+                            publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
+                        });
+                        
+                        // ตั้งค่าเริ่มต้น
+                        if (years.length > 0) {
+                            publicYear2Select.value = years[0]; // ปีล่าสุด
+                        }
+                        if (years.length > 1) {
+                            publicYear1Select.value = years[1]; // ปีก่อนหน้า
+                        } else {
+                            publicYear1Select.value = years[0]; // ถ้ามีปีเดียว ก็เลือกปีเดียวกันไปก่อน
+                        }
+
+                        renderStatsChart(); // วาดกราฟใหม่
+                    } else {
+                        throw new Error(result.error || 'ไม่สามารถดึงข้อมูลสถิติได้');
+                    }
+                } catch (error) {
+                    hideLoading();
+                    showAlert(`เกิดข้อผิดพลาดในการโหลดสถิติ: ${error.message}`, 'ข้อผิดพลาด');
+                }
+            }
+            
+            publicUpdateStatsBtn.addEventListener('click', renderStatsChart); // ปุ่มนี้แค่ re-render
+            // --- End Chart Rendering Function ---
+
+
+            // การจัดการล็อกอิน
+            adminLoginBtn.addEventListener('click', function() {
+                loginModal.classList.remove('hidden');
+            });
+
+            cancelLogin.addEventListener('click', function() {
+                loginModal.classList.add('hidden');
+            });
+
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+                    showAlert('ข้อผิดพลาด: ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL', 'ยังไม่ได้ตั้งค่าระบบ');
+                    return;
+                }
+
+                showLoading();
+
+                try {
+                    const payload = {
+                        action: 'login',
+                        username: username,
+                        password: password
+                    };
+
+                    const response = await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8',
+                        },
+                        body: JSON.stringify(payload),
+                        redirect: 'follow'
+                    });
+
+                    const result = await response.json();
+                    hideLoading();
+
+                    if (result.success) {
+                        loginModal.classList.add('hidden');
+                        dashboardPage.classList.add('hidden');
+                        adminDashboard.classList.remove('hidden');
+                        loginForm.reset();
+                    } else {
+                        showAlert(result.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'ล็อกอินไม่สำเร็จ');
+                    }
+                } catch (error) {
+                    hideLoading();
+                    showAlert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'ล็อกอินไม่สำเร็จ');
+                }
+            });
+
+            // การจัดการล็อกเอาต์
+            logoutBtn.addEventListener('click', function() {
+                adminDashboard.classList.add('hidden');
+                dashboardPage.classList.remove('hidden');
+                // โหลดสถิติหน้าหลักใหม่ เผื่อมีการอัพเดต
+                updateStatsData();
+            });
+
+            // การสลับแท็บในแดชบอร์ดผู้ดูแล
+            adminSearchTab.addEventListener('click', function() {
+                adminSearchSection.classList.remove('hidden');
+                adminUploadSection.classList.add('hidden');
+                adminChangePasswordSection.classList.add('hidden'); // (NEW)
+                
+                adminSearchTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminUploadTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminChangePasswordTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600'); // (NEW)
+            });
+
+            adminUploadTab.addEventListener('click', function() {
+                adminSearchSection.classList.add('hidden');
+                adminUploadSection.classList.remove('hidden');
+                adminChangePasswordSection.classList.add('hidden'); // (NEW)
+
+                adminUploadTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminSearchTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminChangePasswordTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600'); // (NEW)
+            });
+
+            // (NEW) การสลับแท็บเปลี่ยนรหัสผ่าน
+            adminChangePasswordTab.addEventListener('click', function() {
+                adminSearchSection.classList.add('hidden');
+                adminUploadSection.classList.add('hidden');
+                adminChangePasswordSection.classList.remove('hidden'); 
+
+                adminChangePasswordTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminSearchTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminUploadTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+            });
+
+
+            // การจัดการการอัพโหลดไฟล์
+            adminFileDropArea.addEventListener('click', () => adminFileInput.click());
+            
+            adminFileDropArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                adminFileDropArea.classList.add('active');
+            });
+            
+            adminFileDropArea.addEventListener('dragleave', () => {
+                adminFileDropArea.classList.remove('active');
+            });
+            
+            adminFileDropArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                adminFileDropArea.classList.remove('active');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
+            });
+            
+            adminFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+            
+            function handleFileSelect(file) {
+                if (file.type !== 'application/pdf') {
+                    showAlert('กรุณาเลือกไฟล์ PDF เท่านั้น', 'ไฟล์ไม่ถูกต้อง');
+                    return;
+                }
+                
+                selectedFile = file;
+                adminFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`;
+            }
+
+            // Helper function to convert file to Base64
+            function fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                });
+            }
+
+
+            // การจัดการประเภทการดำเนินการ
+            function toggleRelatedPersons() {
+                if (adminActionNotify.checked) {
+                    adminRelatedPersonsGroup.style.display = 'block';
+                    document.getElementById('adminRelatedPersons').required = true;
+                } else {
+                    adminRelatedPersonsGroup.style.display = 'none';
+                    document.getElementById('adminRelatedPersons').required = false;
+                }
+            }
+            adminActionNotify.addEventListener('change', toggleRelatedPersons);
+            adminActionPublicize.addEventListener('change', toggleRelatedPersons);
+            // เรียกใช้ครั้งแรกเพื่อตั้งค่าการแสดงผล
+            
+
+
+            // (NEW) การจัดการฟอร์มเปลี่ยนรหัสผ่าน
+            changePasswordForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const oldPassword = document.getElementById('adminOldPassword').value;
+                const newPassword = document.getElementById('adminNewPassword').value;
+                const confirmPassword = document.getElementById('adminConfirmPassword').value;
+
+                if (newPassword !== confirmPassword) {
+                    showAlert('รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน', 'ข้อผิดพลาด');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    showAlert('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร', 'ข้อผิดพลาด');
+                    return;
+                }
+
+                showLoading();
+                changePasswordSubmitBtn.disabled = true;
+
+                try {
+                    const payload = {
+                        action: 'changePassword',
+                        oldPassword: oldPassword,
+                        newPassword: newPassword
+                    };
+
+                    const response = await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8',
+                        },
+                        body: JSON.stringify(payload),
+                        redirect: 'follow'
+                    });
+
+                    const result = await response.json();
+                    hideLoading();
+                    changePasswordSubmitBtn.disabled = false;
+
+                    if (result.success) {
+                        showAlert(result.message || 'เปลี่ยนรหัสผ่านสำเร็จ', 'สำเร็จ');
+                        changePasswordForm.reset();
+                    } else {
+                        showAlert(result.error || 'เกิดข้อผิดพลาด', 'ไม่สำเร็จ');
+                    }
+
+                } catch (error) {
+                    hideLoading();
+                    changePasswordSubmitBtn.disabled = false;
+                    showAlert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'ไม่สำเร็จ');
+                }
+            });
+
+
+            // การจัดการฟอร์มอัพโหลด
+            adminUploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (!selectedFile) {
+                    showAlert('กรุณาเลือกไฟล์ PDF', 'ข้อมูลไม่ครบถ้วน');
+                    return;
+                }
+
+                if (GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+                    showAlert('ข้อผิดพลาด: ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL', 'ยังไม่ได้ตั้งค่าระบบ');
+                    return;
+                }
+
+                showLoading();
+                adminUploadSubmitBtn.disabled = true;
+
+                try {
+                    // 1. แปลงไฟล์เป็น Base64
+                    const fileData = await fileToBase64(selectedFile);
+
+                    // 2. รวบรวมข้อมูลจากฟอร์ม
+                    const payload = {
+                        action: 'uploadFile',
+                        fileName: selectedFile.name,
+                        fileData: fileData,
+                        documentNumber: document.getElementById('adminDocumentNumber').value,
+                        title: document.getElementById('adminTitle').value,
+                        details: document.getElementById('adminDetails').value,
+                        actionType: document.querySelector('input[name="adminActionType"]:checked').value,
+                        relatedPersons: document.getElementById('adminRelatedPersons').value
+                    };
+
+                    // 3. ส่งข้อมูลไป Google Apps Script (doPost)
+                    const response = await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8', // GScript doPost มักจะรับ text/plain
+                        },
+                        body: JSON.stringify(payload),
+                        redirect: 'follow'
+                    });
+
+                    const result = await response.json();
+                    hideLoading();
+                    adminUploadSubmitBtn.disabled = false;
+
+                    if (result.success) {
+                        showAlert(result.message || 'อัพโหลดไฟล์และบันทึกข้อมูลสำเร็จ!', 'สำเร็จ');
+                        adminUploadForm.reset();
+                        adminFileName.textContent = '';
+                        selectedFile = null;
+                        toggleRelatedPersons(); // รีเซ็ตการแสดงผล
+                        
+                        // สลับกลับไปที่แท็บค้นหา
+                        adminSearchTab.click();
+                        
+                        // (ไม่ต้องอัปเดตสถิติที่นี่ เพราะจะอัปเดตเมื่อผู้ใช้ออกจากระบบ)
+
+                    } else {
+                        throw new Error(result.error || 'เกิดข้อผิดพลาดในการอัพโหลด');
+                    }
+
+                } catch (error) {
+                    hideLoading();
+                    adminUploadSubmitBtn.disabled = false;
+                    showAlert(`เกิดข้อผิดพลาด: ${error.message}`, 'อัพโหลดไม่สำเร็จ');
+                }
+            });
+
+            // การจัดการการค้นหาในแดชบอร์ดหลัก
+            document.getElementById('searchBtn').addEventListener('click', function() {
+                const searchInput = document.getElementById('searchInput').value;
+                const searchType = document.querySelector('input[name="searchType"]:checked').value;
+                
+                performSearch(searchInput, searchType);
+            });
+
+            // การจัดการการค้นหาในแดชบอร์ดผู้ดูแล
+            document.getElementById('adminSearchBtn').addEventListener('click', function() {
+                const searchInput = document.getElementById('adminSearchInput').value;
+                const searchType = document.querySelector('input[name="adminSearchType"]:checked').value;
+                
+                performSearch(searchInput, searchType);
+            });
+
+            // -----------------------------------------------------------------
+            // (FIX) - ย้ายการเรียกใช้ฟังก์ชันเริ่มต้นมาไว้ท้ายสุดของ Listener
+            // -----------------------------------------------------------------
+            toggleRelatedPersons();
+            updateStatsData(); // ดึงข้อมูลสถิติเมื่อ DOM โหลดเสร็จ
+
+        }); // <-- สิ้นสุด DOMContentLoaded
+    </script>
+</body>
+</html>
