@@ -38,7 +38,7 @@
             box-shadow: 0 10px 20px rgba(61, 68, 154, 0.3);
         }
         .btn-primary:disabled {
-            background: #9ca3af; /* gray-400 */
+            background: #9ca3af;
             transform: none;
             box-shadow: none;
             cursor: not-allowed;
@@ -53,7 +53,6 @@
         .table-row:hover {
             background-color: rgba(61, 68, 154, 0.05);
         }
-        /* Mobile Pagination */
         .pagination-mobile-stack {
             display: none;
         }
@@ -73,7 +72,6 @@
         <!-- ส่วนหัว -->
         <header class="glass mb-8 p-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between">
-                <!-- Updated Logo -->
                 <div class="flex items-center justify-center mb-4 md:mb-0 md:justify-start">
                     <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" 
                          alt="Logo" 
@@ -121,16 +119,14 @@
                             <th class="py-3 px-4 text-center font-semibold text-gray-700">ไฟล์</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- MOCK DATA REMOVED (8 <tr> blocks) -->
+                    <tbody id="publicSearchResults">
+                        <!-- ข้อมูลจะถูกเพิ่มโดย JavaScript -->
                     </tbody>
                 </table>
             </div>
-            
-            <!-- ตัวแบ่งหน้า (REMOVED) -->
         </div>
 
-        <!-- สถิติ (ย้ายมาหน้าหลัก) -->
+        <!-- สถิติ -->
         <div id="publicStatsSection" class="glass p-6 mb-8">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">สถิติหนังสือเข้ารายเดือน</h2>
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -156,14 +152,12 @@
                 <canvas id="publicMonthlyStatsChart" class="w-full"></canvas>
             </div>
         </div>
-
     </div>
 
     <!-- หน้าเข้าสู่ระบบผู้ดูแล (Modal) -->
     <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="w-full max-w-md mx-4">
             <div class="glass p-8 rounded-2xl">
-                <!-- โลโก้ -->
                 <div class="text-center mb-8">
                     <div class="flex justify-center mb-4">
                         <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" 
@@ -174,7 +168,6 @@
                     <p class="text-gray-600 mt-2">ส่วนผู้ดูแลระบบ</p>
                 </div>
 
-                <!-- ฟอร์มล็อกอิน -->
                 <form id="loginForm">
                     <div class="mb-6">
                         <label for="username" class="block text-gray-700 mb-2 font-medium">ชื่อผู้ใช้</label>
@@ -233,7 +226,6 @@
                                 อัพโหลดหนังสือ
                             </button>
                         </li>
-                        <!-- (NEW) Change Password Tab -->
                         <li>
                             <button id="adminChangePasswordTab" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition text-gray-700 flex items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -245,21 +237,20 @@
                     </ul>
                 </div>
 
-                <!-- สถิติ -->
                 <div class="glass p-6">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">สถิติ (ภาพรวม)</h2>
                     <div class="space-y-4">
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">หนังสือทั้งหมด</span>
-                            <span class="text-lg font-bold text-indigo-600">125</span>
+                            <span class="text-lg font-bold text-indigo-600" id="totalDocuments">0</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">เพิ่มเดือนนี้</span>
-                            <span class="text-lg font-bold text-green-600">12</span>
+                            <span class="text-lg font-bold text-green-600" id="monthlyDocuments">0</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">รอดำเนินการ</span>
-                            <span class="text-lg font-bold text-yellow-600">5</span>
+                            <span class="text-lg font-bold text-yellow-600" id="pendingDocuments">0</span>
                         </div>
                     </div>
                 </div>
@@ -289,9 +280,8 @@
                         </div>
                     </div>
 
-                    <!-- ตารางผลการค้นหา -->
                     <div class="glass p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">รายการหนังสือราชการ (ตัวอย่าง)</h2>
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">รายการหนังสือราชการ</h2>
                         <div class="overflow-x-auto">
                             <table class="w-full">
                                 <thead>
@@ -303,8 +293,8 @@
                                         <th class="py-3 px-4 text-center font-semibold text-gray-700">จัดการ</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <!-- MOCK DATA REMOVED (4 <tr> blocks) -->
+                                <tbody id="adminSearchResults">
+                                    <!-- ข้อมูลจะถูกเพิ่มโดย JavaScript -->
                                 </tbody>
                             </table>
                         </div>
@@ -372,7 +362,7 @@
                     </div>
                 </div>
 
-                <!-- (NEW) ส่วนเปลี่ยนรหัสผ่าน -->
+                <!-- ส่วนเปลี่ยนรหัสผ่าน -->
                 <div id="adminChangePasswordSection" class="hidden">
                     <div class="glass p-6">
                         <h2 class="text-xl font-semibold text-gray-800 mb-6">เปลี่ยนรหัสผ่าน</h2>
@@ -396,7 +386,6 @@
                         </form>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -412,7 +401,7 @@
         </div>
     </div>
 
-    <!-- Search Result Modal (NEW) -->
+    <!-- Search Result Modal -->
     <div id="searchResultModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] hidden">
         <div class="w-full max-w-lg mx-4">
             <div class="glass p-6 rounded-2xl shadow-lg">
@@ -420,29 +409,17 @@
                     <h3 id="searchResultTitle" class="text-xl font-semibold text-gray-800">ผลการค้นหา</h3>
                     <button id="searchResultCloseBtn" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
                 </div>
-                <!-- Content will be injected by JS -->
                 <div id="searchResultList" class="max-h-[60vh] overflow-y-auto pr-2">
-                    <!-- Example item (for structure):
-                    <div class="p-4 mb-3 bg-white bg-opacity-50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                        <div class="mb-3 sm:mb-0">
-                            <p class="font-semibold text-indigo-800">ที่ ศธ ๐๕๐๗/ว ๓๖๙</p>
-                            <p class="text-gray-700">เรื่อง การประชุมคณะกรรมการการศึกษาขั้นพื้นฐาน</p>
-                        </div>
-                        <button class="btn-primary text-white px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap">
-                            ดูไฟล์
-                        </button>
-                    </div>
-                    -->
+                    <!-- ข้อมูลจะถูกเพิ่มโดย JavaScript -->
                 </div>
                 <button id="searchResultCloseBtnBottom" class="w-full mt-6 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-400 transition">ปิด</button>
             </div>
         </div>
     </div>
 
-    <!-- Loading Modal (NEW) -->
+    <!-- Loading Modal -->
     <div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200] hidden">
         <div class="glass-dark p-8 rounded-2xl flex flex-col items-center">
-            <!-- Spinner -->
             <svg class="animate-spin h-10 w-10 text-white mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -451,131 +428,571 @@
         </div>
     </div>
 
-    <!-- Footer (NEW) -->
+    <!-- Footer -->
     <footer class="text-center text-sm text-gray-600 p-4 mt-8">
         <p>จัดทำโดยกลุ่มบริหารงานบุคคล โรงเรียนวังน้ำเย็นวิทยาคม</p>
         <p>พัฒนาระบบโดย ครูกีรติ ประสพพรรังสี</p>
     </footer>
 
+    <script>
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ★★★ URL ของ GOOGLE APPS SCRIPT WEB APP ★★★
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMjOGrKm39x6fOH8ciiB-9ikBQlElOyUEUCx_fxbxHSO5aW9meiE7ZZBz_i9wvhdWb/exec';
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-    <script>// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-// ★★★ URL ของ GOOGLE APPS SCRIPT WEB APP ★★★
-const GOOGLE_SCRIPT_URL = 'https://wnyxmanagementgroup.github.io/hqoc/proxy.html';
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // ตัวแปรสถานะส่วนกลาง
+        let selectedFile = null;
+        let statsChartInstance = null;
+        let mockStatsData = {};
 
-// ฟังก์ชันเรียกใช้ Google Apps Script แบบ JSONP (สำหรับ GET requests)
-function callGASJsonp(action, payload = {}) {
-    return new Promise((resolve, reject) => {
-        // สร้าง callback name ที่ unique
-        const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-        
-        // สร้าง URL
-        const params = new URLSearchParams({
-            ...payload,
-            action: action,
-            callback: callbackName
-        });
-        
-        const url = GOOGLE_SCRIPT_URL + '?' + params.toString();
-        
-        // สร้าง script element
-        const script = document.createElement('script');
-        script.src = url;
-        
-        // กำหนด global callback function
-        window[callbackName] = function(data) {
-            // ล้างทรัพยากร
-            delete window[callbackName];
-            document.body.removeChild(script);
-            
-            // คืนค่า result
-            resolve(data);
-        };
-        
-        // ตั้งค่า error handling
-        script.onerror = function() {
-            delete window[callbackName];
-            document.body.removeChild(script);
-            reject(new Error('JSONP request failed'));
-        };
-        
-        // เพิ่ม script ไปยัง document
-        document.body.appendChild(script);
-        
-        // ตั้งค่า timeout
-        setTimeout(() => {
-            if (window[callbackName]) {
-                delete window[callbackName];
-                document.body.removeChild(script);
-                reject(new Error('JSONP timeout'));
-            }
-        }, 15000);
-    });
-}
-
-// ฟังก์ชันเรียกใช้สำหรับ POST requests
-async function callGASPost(action, payload = {}) {
-    showLoading();
-    
-    try {
-        // สำหรับ POST requests ใช้ JSONP โดยเพิ่ม callback parameter
-        const result = await callGASJsonp(action, payload);
-        hideLoading();
-        return result;
-    } catch (error) {
-        hideLoading();
-        throw new Error(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
-    }
-}
-
-// ฟังก์ชันสำหรับดึงข้อมูลสถิติ
-async function updateStatsData() {
-    try {
-        const result = await callGASJsonp('stats');
-        
-        if (result.success) {
-            mockStatsData = result.data;
-            
-            const years = Object.keys(mockStatsData).sort((a, b) => b - a);
-            publicYear1Select.innerHTML = '';
-            publicYear2Select.innerHTML = '';
-            
-            if (years.length === 0) {
-                 // ไม่มีข้อมูลสถิติ
-                 mockStatsData = {
-                    "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-                 };
-            } else {
-                years.forEach(year => {
-                    publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
-                    publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
+        // ฟังก์ชันเรียกใช้ Google Apps Script แบบ JSONP
+        function callGASJsonp(action, payload = {}) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+                
+                const params = new URLSearchParams({
+                    ...payload,
+                    action: action,
+                    callback: callbackName
                 });
                 
-                if (years.length > 0) {
-                    publicYear2Select.value = years[0];
-                }
-                if (years.length > 1) {
-                    publicYear1Select.value = years[1];
+                const url = GOOGLE_SCRIPT_URL + '?' + params.toString();
+                
+                const script = document.createElement('script');
+                script.src = url;
+                
+                window[callbackName] = function(data) {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    resolve(data);
+                };
+                
+                script.onerror = function() {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    reject(new Error('JSONP request failed'));
+                };
+                
+                document.body.appendChild(script);
+                
+                setTimeout(() => {
+                    if (window[callbackName]) {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        reject(new Error('JSONP timeout'));
+                    }
+                }, 15000);
+            });
+        }
+
+        // ฟังก์ชันเรียกใช้สำหรับ POST requests
+        async function callGASPost(action, payload = {}) {
+            showLoading();
+            
+            try {
+                const result = await callGASJsonp(action, payload);
+                hideLoading();
+                return result;
+            } catch (error) {
+                hideLoading();
+                throw new Error(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // องค์ประกอบ DOM
+            const dashboardPage = document.getElementById('dashboardPage');
+            const loginModal = document.getElementById('loginModal');
+            const adminDashboard = document.getElementById('adminDashboard');
+            const adminLoginBtn = document.getElementById('adminLoginBtn');
+            const cancelLogin = document.getElementById('cancelLogin');
+            const loginForm = document.getElementById('loginForm');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const adminSearchTab = document.getElementById('adminSearchTab');
+            const adminUploadTab = document.getElementById('adminUploadTab');
+            const adminSearchSection = document.getElementById('adminSearchSection');
+            const adminUploadSection = document.getElementById('adminUploadSection');
+            const adminFileDropArea = document.getElementById('adminFileDropArea');
+            const adminFileInput = document.getElementById('adminFileInput');
+            const adminFileName = document.getElementById('adminFileName');
+            const adminActionNotify = document.getElementById('adminActionNotify');
+            const adminActionPublicize = document.getElementById('adminActionPublicize');
+            const adminRelatedPersonsGroup = document.getElementById('adminRelatedPersonsGroup');
+            const adminUploadForm = document.getElementById('adminUploadForm');
+            const adminUploadSubmitBtn = document.getElementById('adminUploadSubmitBtn');
+            const adminChangePasswordTab = document.getElementById('adminChangePasswordTab');
+            const adminChangePasswordSection = document.getElementById('adminChangePasswordSection');
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            const changePasswordSubmitBtn = document.getElementById('changePasswordSubmitBtn');
+            const publicStatsSection = document.getElementById('publicStatsSection');
+            const publicYear1Select = document.getElementById('publicYear1Select');
+            const publicYear2Select = document.getElementById('publicYear2Select');
+            const publicUpdateStatsBtn = document.getElementById('publicUpdateStatsBtn');
+            const publicMonthlyStatsChart = document.getElementById('publicMonthlyStatsChart');
+            const customAlertModal = document.getElementById('customAlertModal');
+            const customAlertTitle = document.getElementById('customAlertTitle');
+            const customAlertMessage = document.getElementById('customAlertMessage');
+            const customAlertCloseBtn = document.getElementById('customAlertCloseBtn');
+            const searchResultModal = document.getElementById('searchResultModal');
+            const searchResultTitle = document.getElementById('searchResultTitle');
+            const searchResultList = document.getElementById('searchResultList');
+            const searchResultCloseBtn = document.getElementById('searchResultCloseBtn');
+            const searchResultCloseBtnBottom = document.getElementById('searchResultCloseBtnBottom');
+            const loadingModal = document.getElementById('loadingModal');
+            const searchBtn = document.getElementById('searchBtn');
+            const adminSearchBtn = document.getElementById('adminSearchBtn');
+
+            // --- Loading Modal Functions ---
+            function showLoading() {
+                loadingModal.classList.remove('hidden');
+            }
+            
+            function hideLoading() {
+                loadingModal.classList.add('hidden');
+            }
+
+            // --- Custom Alert Function ---
+            function showAlert(message, title = 'ข้อความ') {
+                customAlertTitle.textContent = title;
+                customAlertMessage.textContent = message;
+                customAlertModal.classList.remove('hidden');
+            }
+            
+            customAlertCloseBtn.addEventListener('click', function() {
+                customAlertModal.classList.add('hidden');
+            });
+
+            // --- Search Result Modal Functions ---
+            function closeSearchResultModal() {
+                searchResultModal.classList.add('hidden');
+            }
+
+            searchResultCloseBtn.addEventListener('click', closeSearchResultModal);
+            searchResultCloseBtnBottom.addEventListener('click', closeSearchResultModal);
+            
+            function viewFile(fileUrl) {
+                closeSearchResultModal();
+                if (fileUrl && fileUrl !== 'null' && fileUrl !== 'undefined') {
+                    window.open(fileUrl, '_blank');
                 } else {
-                    publicYear1Select.value = years[0];
+                    showAlert('ไม่พบลิงก์ไฟล์', 'ข้อผิดพลาด');
                 }
             }
 
-            renderStatsChart();
-        } else {
-            throw new Error(result.error || 'ไม่สามารถดึงข้อมูลสถิติได้');
-        }
-    } catch (error) {
-        console.error('Error fetching stats:', error);
-        // ใช้ mock data สำรอง
-        mockStatsData = {
-            "2567": [5, 8, 12, 6, 9, 15, 7, 10, 8, 11, 9, 7],
-            "2566": [3, 6, 8, 4, 7, 10, 5, 8, 6, 9, 7, 5]
-        };
-        renderStatsChart();
-        showAlert(`ใช้ข้อมูลตัวอย่างเนื่องจาก: ${error.message}`, 'แจ้งเตือน');
-    }
-}</script>
+            // --- ฟังก์ชันค้นหาหลัก ---
+            async function performSearch(searchInput, searchType) {
+                if (!searchInput) {
+                    showAlert('กรุณากรอกคำค้นหา');
+                    return;
+                }
+
+                showLoading();
+                
+                try {
+                    const result = await callGASJsonp('search', {
+                        query: searchInput,
+                        type: searchType
+                    });
+
+                    if (result.success) {
+                        const results = result.data;
+                        searchResultList.innerHTML = '';
+
+                        if (results.length > 0) {
+                            searchResultTitle.textContent = `พบ ${results.length} รายการ`;
+                            
+                            results.forEach(doc => {
+                                const resultItem = document.createElement('div');
+                                resultItem.className = 'p-4 mb-3 bg-white bg-opacity-50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
+                                
+                                const docNo = doc['เลขที่หนังสือราชการ'] || 'N/A';
+                                const title = doc['ชื่อเรื่อง'] || 'N/A';
+                                let date = doc['วันที่อัพโหลด'] ? new Date(doc['วันที่อัพโหลด']).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                                const fileUrl = doc['ลิงก์ไฟล์'] || null;
+
+                                resultItem.innerHTML = `
+                                    <div class="flex-1">
+                                        <p class="font-semibold text-indigo-800">${docNo}</p>
+                                        <p class="text-gray-700">${title}</p>
+                                        <p class="text-gray-500 text-sm mt-1">${date}</p>
+                                    </div>
+                                    <button onclick="viewFile('${fileUrl}')" class="btn-primary text-white px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap w-full sm:w-auto" ${!fileUrl ? 'disabled' : ''}>
+                                        ดูไฟล์
+                                    </button>
+                                `;
+                                searchResultList.appendChild(resultItem);
+                            });
+                            
+                        } else {
+                            searchResultTitle.textContent = 'ผลการค้นหา';
+                            searchResultList.innerHTML = '<p class="text-gray-700 text-center">ไม่พบหนังสือในระบบ</p>';
+                        }
+
+                        searchResultModal.classList.remove('hidden');
+                    } else {
+                        throw new Error(result.error || 'ไม่สามารถค้นหาข้อมูลได้');
+                    }
+                } catch (error) {
+                    showAlert(`เกิดข้อผิดพลาดในการค้นหา: ${error.message}`, 'ข้อผิดพลาด');
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            // --- Chart Rendering Function ---
+            const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+            function renderStatsChart() {
+                const year1 = publicYear1Select.value;
+                const year2 = publicYear2Select.value;
+
+                if (year1 === year2) {
+                    showAlert('กรุณาเลือกปีที่แตกต่างกันเพื่อเปรียบเทียบ', 'เลือกปีไม่ถูกต้อง');
+                    return;
+                }
+
+                const dataYear1 = mockStatsData[year1] || Array(12).fill(0);
+                const dataYear2 = mockStatsData[year2] || Array(12).fill(0);
+
+                if (statsChartInstance) {
+                    statsChartInstance.destroy();
+                }
+
+                const ctx = publicMonthlyStatsChart.getContext('2d');
+                statsChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: monthLabels,
+                        datasets: [
+                            {
+                                label: `พ.ศ. ${year1}`,
+                                data: dataYear1,
+                                backgroundColor: 'rgba(61, 68, 154, 0.6)',
+                                borderColor: 'rgba(61, 68, 154, 1)',
+                                borderWidth: 1,
+                                borderRadius: 5
+                            },
+                            {
+                                label: `พ.ศ. ${year2}`,
+                                data: dataYear2,
+                                backgroundColor: 'rgba(251, 146, 60, 0.6)',
+                                borderColor: 'rgba(251, 146, 60, 1)',
+                                borderWidth: 1,
+                                borderRadius: 5
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.raw} ฉบับ`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // ฟังก์ชันสำหรับดึงข้อมูลสถิติ
+            async function updateStatsData() {
+                try {
+                    const result = await callGASJsonp('stats');
+                    
+                    if (result.success) {
+                        mockStatsData = result.data;
+                        
+                        const years = Object.keys(mockStatsData).sort((a, b) => b - a);
+                        publicYear1Select.innerHTML = '';
+                        publicYear2Select.innerHTML = '';
+                        
+                        if (years.length === 0) {
+                            mockStatsData = {
+                                "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                            };
+                        } else {
+                            years.forEach(year => {
+                                publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
+                                publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
+                            });
+                            
+                            if (years.length > 0) {
+                                publicYear2Select.value = years[0];
+                            }
+                            if (years.length > 1) {
+                                publicYear1Select.value = years[1];
+                            } else {
+                                publicYear1Select.value = years[0];
+                            }
+                        }
+
+                        renderStatsChart();
+                    } else {
+                        throw new Error(result.error || 'ไม่สามารถดึงข้อมูลสถิติได้');
+                    }
+                } catch (error) {
+                    console.error('Error fetching stats:', error);
+                    mockStatsData = {
+                        "2567": [5, 8, 12, 6, 9, 15, 7, 10, 8, 11, 9, 7],
+                        "2566": [3, 6, 8, 4, 7, 10, 5, 8, 6, 9, 7, 5]
+                    };
+                    renderStatsChart();
+                    showAlert(`ใช้ข้อมูลตัวอย่างเนื่องจาก: ${error.message}`, 'แจ้งเตือน');
+                }
+            }
+
+            // การจัดการล็อกอิน
+            adminLoginBtn.addEventListener('click', function() {
+                loginModal.classList.remove('hidden');
+            });
+
+            cancelLogin.addEventListener('click', function() {
+                loginModal.classList.add('hidden');
+            });
+
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                try {
+                    const result = await callGASPost('login', {
+                        username: username,
+                        password: password
+                    });
+
+                    if (result.success) {
+                        loginModal.classList.add('hidden');
+                        dashboardPage.classList.add('hidden');
+                        adminDashboard.classList.remove('hidden');
+                        loginForm.reset();
+                        showAlert('เข้าสู่ระบบสำเร็จ', 'สำเร็จ');
+                    } else {
+                        showAlert(result.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'ล็อกอินไม่สำเร็จ');
+                    }
+                } catch (error) {
+                    showAlert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'ล็อกอินไม่สำเร็จ');
+                }
+            });
+
+            // การจัดการล็อกเอาต์
+            logoutBtn.addEventListener('click', function() {
+                adminDashboard.classList.add('hidden');
+                dashboardPage.classList.remove('hidden');
+                updateStatsData();
+                showAlert('ออกจากระบบสำเร็จ', 'สำเร็จ');
+            });
+
+            // การสลับแท็บในแดชบอร์ดผู้ดูแล
+            adminSearchTab.addEventListener('click', function() {
+                adminSearchSection.classList.remove('hidden');
+                adminUploadSection.classList.add('hidden');
+                adminChangePasswordSection.classList.add('hidden');
+                
+                adminSearchTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminUploadTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminChangePasswordTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+            });
+
+            adminUploadTab.addEventListener('click', function() {
+                adminSearchSection.classList.add('hidden');
+                adminUploadSection.classList.remove('hidden');
+                adminChangePasswordSection.classList.add('hidden');
+
+                adminUploadTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminSearchTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminChangePasswordTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+            });
+
+            adminChangePasswordTab.addEventListener('click', function() {
+                adminSearchSection.classList.add('hidden');
+                adminUploadSection.classList.add('hidden');
+                adminChangePasswordSection.classList.remove('hidden'); 
+
+                adminChangePasswordTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminSearchTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+                adminUploadTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
+            });
+
+            // การจัดการการอัพโหลดไฟล์
+            adminFileDropArea.addEventListener('click', () => adminFileInput.click());
+            
+            adminFileDropArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                adminFileDropArea.classList.add('active');
+            });
+            
+            adminFileDropArea.addEventListener('dragleave', () => {
+                adminFileDropArea.classList.remove('active');
+            });
+            
+            adminFileDropArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                adminFileDropArea.classList.remove('active');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
+            });
+            
+            adminFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+            
+            function handleFileSelect(file) {
+                if (file.type !== 'application/pdf') {
+                    showAlert('กรุณาเลือกไฟล์ PDF เท่านั้น', 'ไฟล์ไม่ถูกต้อง');
+                    return;
+                }
+                
+                selectedFile = file;
+                adminFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`;
+            }
+
+            // Helper function to convert file to Base64
+            function fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                });
+            }
+
+            // การจัดการประเภทการดำเนินการ
+            function toggleRelatedPersons() {
+                if (adminActionNotify.checked) {
+                    adminRelatedPersonsGroup.style.display = 'block';
+                    document.getElementById('adminRelatedPersons').required = true;
+                } else {
+                    adminRelatedPersonsGroup.style.display = 'none';
+                    document.getElementById('adminRelatedPersons').required = false;
+                }
+            }
+            
+            adminActionNotify.addEventListener('change', toggleRelatedPersons);
+            adminActionPublicize.addEventListener('change', toggleRelatedPersons);
+
+            // การจัดการฟอร์มเปลี่ยนรหัสผ่าน
+            changePasswordForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const oldPassword = document.getElementById('adminOldPassword').value;
+                const newPassword = document.getElementById('adminNewPassword').value;
+                const confirmPassword = document.getElementById('adminConfirmPassword').value;
+
+                if (newPassword !== confirmPassword) {
+                    showAlert('รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน', 'ข้อผิดพลาด');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    showAlert('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร', 'ข้อผิดพลาด');
+                    return;
+                }
+
+                changePasswordSubmitBtn.disabled = true;
+
+                try {
+                    const result = await callGASPost('changePassword', {
+                        oldPassword: oldPassword,
+                        newPassword: newPassword
+                    });
+
+                    if (result.success) {
+                        showAlert(result.message || 'เปลี่ยนรหัสผ่านสำเร็จ', 'สำเร็จ');
+                        changePasswordForm.reset();
+                    } else {
+                        showAlert(result.error || 'เกิดข้อผิดพลาด', 'ไม่สำเร็จ');
+                    }
+                } catch (error) {
+                    showAlert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'ไม่สำเร็จ');
+                } finally {
+                    changePasswordSubmitBtn.disabled = false;
+                }
+            });
+
+            // การจัดการฟอร์มอัพโหลด
+            adminUploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (!selectedFile) {
+                    showAlert('กรุณาเลือกไฟล์ PDF', 'ข้อมูลไม่ครบถ้วน');
+                    return;
+                }
+
+                adminUploadSubmitBtn.disabled = true;
+
+                try {
+                    const fileData = await fileToBase64(selectedFile);
+
+                    const result = await callGASPost('uploadFile', {
+                        fileName: selectedFile.name,
+                        fileData: fileData,
+                        documentNumber: document.getElementById('adminDocumentNumber').value,
+                        title: document.getElementById('adminTitle').value,
+                        details: document.getElementById('adminDetails').value,
+                        actionType: document.querySelector('input[name="adminActionType"]:checked').value,
+                        relatedPersons: document.getElementById('adminRelatedPersons').value
+                    });
+
+                    if (result.success) {
+                        showAlert(result.message || 'อัพโหลดไฟล์และบันทึกข้อมูลสำเร็จ!', 'สำเร็จ');
+                        adminUploadForm.reset();
+                        adminFileName.textContent = '';
+                        selectedFile = null;
+                        toggleRelatedPersons();
+                        
+                        adminSearchTab.click();
+                    } else {
+                        throw new Error(result.error || 'เกิดข้อผิดพลาดในการอัพโหลด');
+                    }
+                } catch (error) {
+                    showAlert(`เกิดข้อผิดพลาด: ${error.message}`, 'อัพโหลดไม่สำเร็จ');
+                } finally {
+                    adminUploadSubmitBtn.disabled = false;
+                }
+            });
+
+            // การจัดการการค้นหาในแดชบอร์ดหลัก
+            searchBtn.addEventListener('click', function() {
+                const searchInput = document.getElementById('searchInput').value;
+                const searchType = document.querySelector('input[name="searchType"]:checked').value;
+                performSearch(searchInput, searchType);
+            });
+
+            // การจัดการการค้นหาในแดชบอร์ดผู้ดูแล
+            adminSearchBtn.addEventListener('click', function() {
+                const searchInput = document.getElementById('adminSearchInput').value;
+                const searchType = document.querySelector('input[name="adminSearchType"]:checked').value;
+                performSearch(searchInput, searchType);
+            });
+
+            publicUpdateStatsBtn.addEventListener('click', renderStatsChart);
+
+            // เรียกใช้ฟังก์ชันเริ่มต้น
+            toggleRelatedPersons();
+            updateStatsData();
+        });
+    </script>
 </body>
 </html>
