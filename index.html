@@ -446,58 +446,72 @@
         let mockStatsData = {};
 
         // ฟังก์ชันเรียกใช้ Google Apps Script แบบ JSONP
-        function callGASJsonp(action, payload = {}) {
-            return new Promise((resolve, reject) => {
-                const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-                
-                const params = new URLSearchParams({
-                    ...payload,
-                    action: action,
-                    callback: callbackName
-                });
-                
-                const url = GOOGLE_SCRIPT_URL + '?' + params.toString();
-                
-                const script = document.createElement('script');
-                script.src = url;
-                
-                window[callbackName] = function(data) {
-                    delete window[callbackName];
-                    document.body.removeChild(script);
-                    resolve(data);
-                };
-                
-                script.onerror = function() {
-                    delete window[callbackName];
-                    document.body.removeChild(script);
-                    reject(new Error('JSONP request failed'));
-                };
-                
-                document.body.appendChild(script);
-                
-                setTimeout(() => {
-                    if (window[callbackName]) {
-                        delete window[callbackName];
-                        document.body.removeChild(script);
-                        reject(new Error('JSONP timeout'));
-                    }
-                }, 15000);
+        
+function callGASJsonp(action, payload = {}) {
+    return new Promise((resolve, reject) => {
+        const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+        
+        const params = new URLSearchParams({
+            ...payload,
+            action: action,
+            callback: callbackName
+        });
+        
+        const url = GOOGLE_SCRIPT_URL + '?' + params.toString();
+        
+        const script = document.createElement('script');
+        script.src = url;
+        
+        window[callbackName] = function(data) {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            resolve(data);
+        };
+        
+        script.onerror = function() {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            // คืนค่าข้อมูลว่างแทนการ reject
+            resolve({
+                success: false,
+                error: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'
             });
-        }
+        };
+        
+        document.body.appendChild(script);
+        
+        setTimeout(() => {
+            if (window[callbackName]) {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                // คืนค่าข้อมูลว่างแทนการ reject
+                resolve({
+                    success: false,
+                    error: 'การเชื่อมต่อหมดเวลา'
+                });
+            }
+        }, 15000);
+    });
+}
 
         // ฟังก์ชันเรียกใช้สำหรับ POST requests
-        async function callGASPost(action, payload = {}) {
-            showLoading();
-            
-            try {
-                const result = await callGASJsonp(action, payload);
-                hideLoading();
-                return result;
-            } catch (error) {
-                hideLoading();
-                throw new Error(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
-            }
-        }
+       // ฟังก์ชันเรียกใช้สำหรับ POST requests
+async function callGASPost(action, payload = {}) {
+    showLoading();
+    
+    try {
+        const result = await callGASJsonp(action, payload);
+        hideLoading();
+        return result;
+    } catch (error) {
+        hideLoading();
+        // คืนค่าข้อมูลว่างแทนการ throw error
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
 
         document.addEventListener('DOMContentLoaded', () => {
             // องค์ประกอบ DOM
@@ -580,64 +594,71 @@
             }
 
             // --- ฟังก์ชันค้นหาหลัก ---
-            async function performSearch(searchInput, searchType) {
-                if (!searchInput) {
-                    showAlert('กรุณากรอกคำค้นหา');
-                    return;
-                }
+            // --- ฟังก์ชันค้นหาหลัก ---
+async function performSearch(searchInput, searchType) {
+    if (!searchInput) {
+        showAlert('กรุณากรอกคำค้นหา');
+        return;
+    }
 
-                showLoading();
+    showLoading();
+    
+    try {
+        const result = await callGASJsonp('search', {
+            query: searchInput,
+            type: searchType
+        });
+
+        if (result.success) {
+            const results = result.data;
+            searchResultList.innerHTML = '';
+
+            if (results.length > 0) {
+                searchResultTitle.textContent = `พบ ${results.length} รายการ`;
                 
-                try {
-                    const result = await callGASJsonp('search', {
-                        query: searchInput,
-                        type: searchType
-                    });
+                results.forEach(doc => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'p-4 mb-3 bg-white bg-opacity-50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
+                    
+                    const docNo = doc['เลขที่หนังสือราชการ'] || 'N/A';
+                    const title = doc['ชื่อเรื่อง'] || 'N/A';
+                    let date = doc['วันที่อัพโหลด'] ? new Date(doc['วันที่อัพโหลด']).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                    const fileUrl = doc['ลิงก์ไฟล์'] || null;
 
-                    if (result.success) {
-                        const results = result.data;
-                        searchResultList.innerHTML = '';
-
-                        if (results.length > 0) {
-                            searchResultTitle.textContent = `พบ ${results.length} รายการ`;
-                            
-                            results.forEach(doc => {
-                                const resultItem = document.createElement('div');
-                                resultItem.className = 'p-4 mb-3 bg-white bg-opacity-50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3';
-                                
-                                const docNo = doc['เลขที่หนังสือราชการ'] || 'N/A';
-                                const title = doc['ชื่อเรื่อง'] || 'N/A';
-                                let date = doc['วันที่อัพโหลด'] ? new Date(doc['วันที่อัพโหลด']).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
-                                const fileUrl = doc['ลิงก์ไฟล์'] || null;
-
-                                resultItem.innerHTML = `
-                                    <div class="flex-1">
-                                        <p class="font-semibold text-indigo-800">${docNo}</p>
-                                        <p class="text-gray-700">${title}</p>
-                                        <p class="text-gray-500 text-sm mt-1">${date}</p>
-                                    </div>
-                                    <button onclick="viewFile('${fileUrl}')" class="btn-primary text-white px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap w-full sm:w-auto" ${!fileUrl ? 'disabled' : ''}>
-                                        ดูไฟล์
-                                    </button>
-                                `;
-                                searchResultList.appendChild(resultItem);
-                            });
-                            
-                        } else {
-                            searchResultTitle.textContent = 'ผลการค้นหา';
-                            searchResultList.innerHTML = '<p class="text-gray-700 text-center">ไม่พบหนังสือในระบบ</p>';
-                        }
-
-                        searchResultModal.classList.remove('hidden');
-                    } else {
-                        throw new Error(result.error || 'ไม่สามารถค้นหาข้อมูลได้');
-                    }
-                } catch (error) {
-                    showAlert(`เกิดข้อผิดพลาดในการค้นหา: ${error.message}`, 'ข้อผิดพลาด');
-                } finally {
-                    hideLoading();
-                }
+                    resultItem.innerHTML = `
+                        <div class="flex-1">
+                            <p class="font-semibold text-indigo-800">${docNo}</p>
+                            <p class="text-gray-700">${title}</p>
+                            <p class="text-gray-500 text-sm mt-1">${date}</p>
+                        </div>
+                        <button onclick="viewFile('${fileUrl}')" class="btn-primary text-white px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap w-full sm:w-auto" ${!fileUrl ? 'disabled' : ''}>
+                            ดูไฟล์
+                        </button>
+                    `;
+                    searchResultList.appendChild(resultItem);
+                });
+                
+            } else {
+                searchResultTitle.textContent = 'ผลการค้นหา';
+                searchResultList.innerHTML = '<p class="text-gray-700 text-center">ไม่พบหนังสือในระบบ</p>';
             }
+
+            searchResultModal.classList.remove('hidden');
+        } else {
+            // ไม่ต้องแสดง error - แค่แสดงว่าไม่พบข้อมูล
+            searchResultTitle.textContent = 'ผลการค้นหา';
+            searchResultList.innerHTML = '<p class="text-gray-700 text-center">ยังไม่มีข้อมูลในระบบ</p>';
+            searchResultModal.classList.remove('hidden');
+        }
+    } catch (error) {
+        // ไม่ต้องแสดง error alert - แค่แสดงว่าไม่พบข้อมูล
+        searchResultTitle.textContent = 'ผลการค้นหา';
+        searchResultList.innerHTML = '<p class="text-gray-700 text-center">ยังไม่มีข้อมูลในระบบ</p>';
+        searchResultModal.classList.remove('hidden');
+    } finally {
+        hideLoading();
+    }
+}
 
             // --- Chart Rendering Function ---
             const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -710,52 +731,83 @@
             }
             
             // ฟังก์ชันสำหรับดึงข้อมูลสถิติ
-            async function updateStatsData() {
-                try {
-                    const result = await callGASJsonp('stats');
-                    
-                    if (result.success) {
-                        mockStatsData = result.data;
-                        
-                        const years = Object.keys(mockStatsData).sort((a, b) => b - a);
-                        publicYear1Select.innerHTML = '';
-                        publicYear2Select.innerHTML = '';
-                        
-                        if (years.length === 0) {
-                            mockStatsData = {
-                                "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-                            };
-                        } else {
-                            years.forEach(year => {
-                                publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
-                                publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
-                            });
-                            
-                            if (years.length > 0) {
-                                publicYear2Select.value = years[0];
-                            }
-                            if (years.length > 1) {
-                                publicYear1Select.value = years[1];
-                            } else {
-                                publicYear1Select.value = years[0];
-                            }
-                        }
-
-                        renderStatsChart();
-                    } else {
-                        throw new Error(result.error || 'ไม่สามารถดึงข้อมูลสถิติได้');
-                    }
-                } catch (error) {
-                    console.error('Error fetching stats:', error);
-                    mockStatsData = {
-                        "2567": [5, 8, 12, 6, 9, 15, 7, 10, 8, 11, 9, 7],
-                        "2566": [3, 6, 8, 4, 7, 10, 5, 8, 6, 9, 7, 5]
-                    };
-                    renderStatsChart();
-                    showAlert(`ใช้ข้อมูลตัวอย่างเนื่องจาก: ${error.message}`, 'แจ้งเตือน');
+           // ฟังก์ชันสำหรับดึงข้อมูลสถิติ
+async function updateStatsData() {
+    try {
+        const result = await callGASJsonp('stats');
+        
+        if (result.success) {
+            mockStatsData = result.data;
+            
+            // ตรวจสอบว่ามีข้อมูลสถิติหรือไม่
+            const years = Object.keys(mockStatsData).sort((a, b) => b - a);
+            publicYear1Select.innerHTML = '';
+            publicYear2Select.innerHTML = '';
+            
+            if (years.length === 0) {
+                // ไม่มีข้อมูลสถิติ - ไม่ต้องแสดง error
+                console.log('ยังไม่มีข้อมูลสถิติในระบบ');
+                mockStatsData = {
+                    "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                };
+                
+                // เพิ่มตัวเลือกปีเริ่มต้น
+                publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
+                publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
+            } else {
+                // มีข้อมูลสถิติ - แสดงข้อมูลจริง
+                years.forEach(year => {
+                    publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
+                    publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
+                });
+                
+                if (years.length > 0) {
+                    publicYear2Select.value = years[0];
+                }
+                if (years.length > 1) {
+                    publicYear1Select.value = years[1];
+                } else {
+                    publicYear1Select.value = years[0];
                 }
             }
+
+            renderStatsChart();
+        } else {
+            // ไม่ต้องแสดง error ถ้ายังไม่มีข้อมูล
+            console.log('ยังไม่มีข้อมูลสถิติในระบบ:', result.error);
+            mockStatsData = {
+                "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            };
+            
+            // เพิ่มตัวเลือกปีเริ่มต้น
+            publicYear1Select.innerHTML = '';
+            publicYear2Select.innerHTML = '';
+            publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
+            publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
+            
+            renderStatsChart();
+        }
+    } catch (error) {
+        // ไม่ต้องแสดง error alert - แค่ log ใน console
+        console.log('ยังไม่มีข้อมูลสถิติในระบบ:', error.message);
+        
+        // ใช้ข้อมูลว่าง
+        mockStatsData = {
+            "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        };
+        
+        // เพิ่มตัวเลือกปีเริ่มต้น
+        publicYear1Select.innerHTML = '';
+        publicYear2Select.innerHTML = '';
+        publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
+        publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
+        
+        renderStatsChart();
+    }
+}
 
             // การจัดการล็อกอิน
             adminLoginBtn.addEventListener('click', function() {
