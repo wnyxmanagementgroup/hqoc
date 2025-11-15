@@ -436,17 +436,58 @@
 
     <script>
         // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ URL ของ GOOGLE APPS SCRIPT WEB APP ★★★
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMjOGrKm39x6fOH8ciiB-9ikBQlElOyUEUCx_fxbxHSO5aW9meiE7ZZBz_i9wvhdWb/exec';
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+// ★★★ URL ของ GOOGLE APPS SCRIPT WEB APP ★★★
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMjOGrKm39x6fOH8ciiB-9ikBQlElOyUEUCx_fxbxHSO5aW9meiE7ZZBz_i9wvhdWb/exec';
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-        // ตัวแปรสถานะส่วนกลาง
-        let selectedFile = null;
-        let statsChartInstance = null;
-        let mockStatsData = {};
+// ตัวแปรสถานะส่วนกลาง
+let selectedFile = null;
+let statsChartInstance = null;
+let mockStatsData = {};
 
-        // ฟังก์ชันเรียกใช้ Google Apps Script แบบ JSONP
-        
+// --- Global Loading Functions ---
+function showLoading() {
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) {
+        loadingModal.classList.remove('hidden');
+    }
+}
+
+function hideLoading() {
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal) {
+        loadingModal.classList.add('hidden');
+    }
+}
+
+// --- Global Alert Function ---
+function showAlert(message, title = 'ข้อความ') {
+    const customAlertModal = document.getElementById('customAlertModal');
+    const customAlertTitle = document.getElementById('customAlertTitle');
+    const customAlertMessage = document.getElementById('customAlertMessage');
+    
+    if (customAlertTitle && customAlertMessage && customAlertModal) {
+        customAlertTitle.textContent = title;
+        customAlertMessage.textContent = message;
+        customAlertModal.classList.remove('hidden');
+    }
+}
+
+// --- Global View File Function ---
+function viewFile(fileUrl) {
+    const searchResultModal = document.getElementById('searchResultModal');
+    if (searchResultModal) {
+        searchResultModal.classList.add('hidden');
+    }
+    
+    if (fileUrl && fileUrl !== 'null' && fileUrl !== 'undefined') {
+        window.open(fileUrl, '_blank');
+    } else {
+        showAlert('ไม่พบลิงก์ไฟล์', 'ข้อผิดพลาด');
+    }
+}
+
+// ฟังก์ชันเรียกใช้ Google Apps Script แบบ JSONP
 function callGASJsonp(action, payload = {}) {
     return new Promise((resolve, reject) => {
         const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
@@ -494,8 +535,7 @@ function callGASJsonp(action, payload = {}) {
     });
 }
 
-        // ฟังก์ชันเรียกใช้สำหรับ POST requests
-       // ฟังก์ชันเรียกใช้สำหรับ POST requests
+// ฟังก์ชันเรียกใช้สำหรับ POST requests
 async function callGASPost(action, payload = {}) {
     showLoading();
     
@@ -513,88 +553,99 @@ async function callGASPost(action, payload = {}) {
     }
 }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // องค์ประกอบ DOM
-            const dashboardPage = document.getElementById('dashboardPage');
-            const loginModal = document.getElementById('loginModal');
-            const adminDashboard = document.getElementById('adminDashboard');
-            const adminLoginBtn = document.getElementById('adminLoginBtn');
-            const cancelLogin = document.getElementById('cancelLogin');
-            const loginForm = document.getElementById('loginForm');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const adminSearchTab = document.getElementById('adminSearchTab');
-            const adminUploadTab = document.getElementById('adminUploadTab');
-            const adminSearchSection = document.getElementById('adminSearchSection');
-            const adminUploadSection = document.getElementById('adminUploadSection');
-            const adminFileDropArea = document.getElementById('adminFileDropArea');
-            const adminFileInput = document.getElementById('adminFileInput');
-            const adminFileName = document.getElementById('adminFileName');
-            const adminActionNotify = document.getElementById('adminActionNotify');
-            const adminActionPublicize = document.getElementById('adminActionPublicize');
-            const adminRelatedPersonsGroup = document.getElementById('adminRelatedPersonsGroup');
-            const adminUploadForm = document.getElementById('adminUploadForm');
-            const adminUploadSubmitBtn = document.getElementById('adminUploadSubmitBtn');
-            const adminChangePasswordTab = document.getElementById('adminChangePasswordTab');
-            const adminChangePasswordSection = document.getElementById('adminChangePasswordSection');
-            const changePasswordForm = document.getElementById('changePasswordForm');
-            const changePasswordSubmitBtn = document.getElementById('changePasswordSubmitBtn');
-            const publicStatsSection = document.getElementById('publicStatsSection');
+// ฟังก์ชันสำหรับดึงข้อมูลสถิติ
+async function updateStatsData() {
+    try {
+        const result = await callGASJsonp('stats');
+        
+        if (result.success) {
+            mockStatsData = result.data;
+            
             const publicYear1Select = document.getElementById('publicYear1Select');
             const publicYear2Select = document.getElementById('publicYear2Select');
-            const publicUpdateStatsBtn = document.getElementById('publicUpdateStatsBtn');
-            const publicMonthlyStatsChart = document.getElementById('publicMonthlyStatsChart');
-            const customAlertModal = document.getElementById('customAlertModal');
-            const customAlertTitle = document.getElementById('customAlertTitle');
-            const customAlertMessage = document.getElementById('customAlertMessage');
-            const customAlertCloseBtn = document.getElementById('customAlertCloseBtn');
-            const searchResultModal = document.getElementById('searchResultModal');
-            const searchResultTitle = document.getElementById('searchResultTitle');
-            const searchResultList = document.getElementById('searchResultList');
-            const searchResultCloseBtn = document.getElementById('searchResultCloseBtn');
-            const searchResultCloseBtnBottom = document.getElementById('searchResultCloseBtnBottom');
-            const loadingModal = document.getElementById('loadingModal');
-            const searchBtn = document.getElementById('searchBtn');
-            const adminSearchBtn = document.getElementById('adminSearchBtn');
-
-            // --- Loading Modal Functions ---
-            function showLoading() {
-                loadingModal.classList.remove('hidden');
-            }
             
-            function hideLoading() {
-                loadingModal.classList.add('hidden');
-            }
-
-            // --- Custom Alert Function ---
-            function showAlert(message, title = 'ข้อความ') {
-                customAlertTitle.textContent = title;
-                customAlertMessage.textContent = message;
-                customAlertModal.classList.remove('hidden');
-            }
-            
-            customAlertCloseBtn.addEventListener('click', function() {
-                customAlertModal.classList.add('hidden');
-            });
-
-            // --- Search Result Modal Functions ---
-            function closeSearchResultModal() {
-                searchResultModal.classList.add('hidden');
-            }
-
-            searchResultCloseBtn.addEventListener('click', closeSearchResultModal);
-            searchResultCloseBtnBottom.addEventListener('click', closeSearchResultModal);
-            
-            function viewFile(fileUrl) {
-                closeSearchResultModal();
-                if (fileUrl && fileUrl !== 'null' && fileUrl !== 'undefined') {
-                    window.open(fileUrl, '_blank');
+            if (publicYear1Select && publicYear2Select) {
+                const years = Object.keys(mockStatsData).sort((a, b) => b - a);
+                publicYear1Select.innerHTML = '';
+                publicYear2Select.innerHTML = '';
+                
+                if (years.length === 0) {
+                    // ไม่มีข้อมูลสถิติ - ไม่ต้องแสดง error
+                    console.log('ยังไม่มีข้อมูลสถิติในระบบ');
+                    mockStatsData = {
+                        "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                    };
+                    
+                    // เพิ่มตัวเลือกปีเริ่มต้น
+                    publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
+                    publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
                 } else {
-                    showAlert('ไม่พบลิงก์ไฟล์', 'ข้อผิดพลาด');
+                    // มีข้อมูลสถิติ - แสดงข้อมูลจริง
+                    years.forEach(year => {
+                        publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
+                        publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
+                    });
+                    
+                    if (years.length > 0) {
+                        publicYear2Select.value = years[0];
+                    }
+                    if (years.length > 1) {
+                        publicYear1Select.value = years[1];
+                    } else {
+                        publicYear1Select.value = years[0];
+                    }
                 }
-            }
 
-            // --- ฟังก์ชันค้นหาหลัก ---
-            // --- ฟังก์ชันค้นหาหลัก ---
+                renderStatsChart();
+            }
+        } else {
+            // ไม่ต้องแสดง error ถ้ายังไม่มีข้อมูล
+            console.log('ยังไม่มีข้อมูลสถิติในระบบ:', result.error);
+            mockStatsData = {
+                "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            };
+            
+            const publicYear1Select = document.getElementById('publicYear1Select');
+            const publicYear2Select = document.getElementById('publicYear2Select');
+            
+            if (publicYear1Select && publicYear2Select) {
+                // เพิ่มตัวเลือกปีเริ่มต้น
+                publicYear1Select.innerHTML = '';
+                publicYear2Select.innerHTML = '';
+                publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
+                publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
+                
+                renderStatsChart();
+            }
+        }
+    } catch (error) {
+        // ไม่ต้องแสดง error alert - แค่ log ใน console
+        console.log('ยังไม่มีข้อมูลสถิติในระบบ:', error.message);
+        
+        // ใช้ข้อมูลว่าง
+        mockStatsData = {
+            "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        };
+        
+        const publicYear1Select = document.getElementById('publicYear1Select');
+        const publicYear2Select = document.getElementById('publicYear2Select');
+        
+        if (publicYear1Select && publicYear2Select) {
+            // เพิ่มตัวเลือกปีเริ่มต้น
+            publicYear1Select.innerHTML = '';
+            publicYear2Select.innerHTML = '';
+            publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
+            publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
+            
+            renderStatsChart();
+        }
+    }
+}
+
+// --- ฟังก์ชันค้นหาหลัก ---
 async function performSearch(searchInput, searchType) {
     if (!searchInput) {
         showAlert('กรุณากรอกคำค้นหา');
@@ -609,12 +660,21 @@ async function performSearch(searchInput, searchType) {
             type: searchType
         });
 
+        const searchResultList = document.getElementById('searchResultList');
+        const searchResultTitle = document.getElementById('searchResultTitle');
+        const searchResultModal = document.getElementById('searchResultModal');
+
         if (result.success) {
             const results = result.data;
-            searchResultList.innerHTML = '';
+            
+            if (searchResultList) {
+                searchResultList.innerHTML = '';
+            }
 
             if (results.length > 0) {
-                searchResultTitle.textContent = `พบ ${results.length} รายการ`;
+                if (searchResultTitle) {
+                    searchResultTitle.textContent = `พบ ${results.length} รายการ`;
+                }
                 
                 results.forEach(doc => {
                     const resultItem = document.createElement('div');
@@ -635,416 +695,152 @@ async function performSearch(searchInput, searchType) {
                             ดูไฟล์
                         </button>
                     `;
-                    searchResultList.appendChild(resultItem);
+                    
+                    if (searchResultList) {
+                        searchResultList.appendChild(resultItem);
+                    }
                 });
                 
             } else {
-                searchResultTitle.textContent = 'ผลการค้นหา';
-                searchResultList.innerHTML = '<p class="text-gray-700 text-center">ไม่พบหนังสือในระบบ</p>';
+                if (searchResultTitle) {
+                    searchResultTitle.textContent = 'ผลการค้นหา';
+                }
+                if (searchResultList) {
+                    searchResultList.innerHTML = '<p class="text-gray-700 text-center">ไม่พบหนังสือในระบบ</p>';
+                }
             }
 
-            searchResultModal.classList.remove('hidden');
+            if (searchResultModal) {
+                searchResultModal.classList.remove('hidden');
+            }
         } else {
             // ไม่ต้องแสดง error - แค่แสดงว่าไม่พบข้อมูล
-            searchResultTitle.textContent = 'ผลการค้นหา';
-            searchResultList.innerHTML = '<p class="text-gray-700 text-center">ยังไม่มีข้อมูลในระบบ</p>';
-            searchResultModal.classList.remove('hidden');
+            if (searchResultTitle) {
+                searchResultTitle.textContent = 'ผลการค้นหา';
+            }
+            if (searchResultList) {
+                searchResultList.innerHTML = '<p class="text-gray-700 text-center">ยังไม่มีข้อมูลในระบบ</p>';
+            }
+            if (searchResultModal) {
+                searchResultModal.classList.remove('hidden');
+            }
         }
     } catch (error) {
         // ไม่ต้องแสดง error alert - แค่แสดงว่าไม่พบข้อมูล
-        searchResultTitle.textContent = 'ผลการค้นหา';
-        searchResultList.innerHTML = '<p class="text-gray-700 text-center">ยังไม่มีข้อมูลในระบบ</p>';
-        searchResultModal.classList.remove('hidden');
+        const searchResultTitle = document.getElementById('searchResultTitle');
+        const searchResultList = document.getElementById('searchResultList');
+        const searchResultModal = document.getElementById('searchResultModal');
+        
+        if (searchResultTitle) {
+            searchResultTitle.textContent = 'ผลการค้นหา';
+        }
+        if (searchResultList) {
+            searchResultList.innerHTML = '<p class="text-gray-700 text-center">ยังไม่มีข้อมูลในระบบ</p>';
+        }
+        if (searchResultModal) {
+            searchResultModal.classList.remove('hidden');
+        }
     } finally {
         hideLoading();
     }
 }
 
-            // --- Chart Rendering Function ---
-            const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+// --- Chart Rendering Function ---
+const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
-            function renderStatsChart() {
-                const year1 = publicYear1Select.value;
-                const year2 = publicYear2Select.value;
+function renderStatsChart() {
+    const publicYear1Select = document.getElementById('publicYear1Select');
+    const publicYear2Select = document.getElementById('publicYear2Select');
+    const publicMonthlyStatsChart = document.getElementById('publicMonthlyStatsChart');
+    
+    if (!publicYear1Select || !publicYear2Select || !publicMonthlyStatsChart) {
+        return;
+    }
 
-                if (year1 === year2) {
-                    showAlert('กรุณาเลือกปีที่แตกต่างกันเพื่อเปรียบเทียบ', 'เลือกปีไม่ถูกต้อง');
-                    return;
+    const year1 = publicYear1Select.value;
+    const year2 = publicYear2Select.value;
+
+    if (year1 === year2) {
+        // ไม่ต้องแสดง alert - แค่ไม่ทำอะไร
+        return;
+    }
+
+    const dataYear1 = mockStatsData[year1] || Array(12).fill(0);
+    const dataYear2 = mockStatsData[year2] || Array(12).fill(0);
+
+    // ตรวจสอบว่ามีข้อมูลหรือไม่ (ไม่ใช่ทั้งหมดเป็น 0)
+    const hasData = dataYear1.some(val => val > 0) || dataYear2.some(val => val > 0);
+
+    if (statsChartInstance) {
+        statsChartInstance.destroy();
+    }
+
+    const ctx = publicMonthlyStatsChart.getContext('2d');
+    statsChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                {
+                    label: `พ.ศ. ${year1}`,
+                    data: dataYear1,
+                    backgroundColor: 'rgba(61, 68, 154, 0.6)',
+                    borderColor: 'rgba(61, 68, 154, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                },
+                {
+                    label: `พ.ศ. ${year2}`,
+                    data: dataYear2,
+                    backgroundColor: 'rgba(251, 146, 60, 0.6)',
+                    borderColor: 'rgba(251, 146, 60, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
                 }
-
-                const dataYear1 = mockStatsData[year1] || Array(12).fill(0);
-                const dataYear2 = mockStatsData[year2] || Array(12).fill(0);
-
-                if (statsChartInstance) {
-                    statsChartInstance.destroy();
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
                 }
-
-                const ctx = publicMonthlyStatsChart.getContext('2d');
-                statsChartInstance = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: monthLabels,
-                        datasets: [
-                            {
-                                label: `พ.ศ. ${year1}`,
-                                data: dataYear1,
-                                backgroundColor: 'rgba(61, 68, 154, 0.6)',
-                                borderColor: 'rgba(61, 68, 154, 1)',
-                                borderWidth: 1,
-                                borderRadius: 5
-                            },
-                            {
-                                label: `พ.ศ. ${year2}`,
-                                data: dataYear2,
-                                backgroundColor: 'rgba(251, 146, 60, 0.6)',
-                                borderColor: 'rgba(251, 146, 60, 1)',
-                                borderWidth: 1,
-                                borderRadius: 5
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 1
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return `${context.dataset.label}: ${context.raw} ฉบับ`;
-                                    }
-                                }
-                            }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw} ฉบับ`;
                         }
                     }
-                });
-            }
-            
-            // ฟังก์ชันสำหรับดึงข้อมูลสถิติ
-           // ฟังก์ชันสำหรับดึงข้อมูลสถิติ
-async function updateStatsData() {
-    try {
-        const result = await callGASJsonp('stats');
-        
-        if (result.success) {
-            mockStatsData = result.data;
-            
-            // ตรวจสอบว่ามีข้อมูลสถิติหรือไม่
-            const years = Object.keys(mockStatsData).sort((a, b) => b - a);
-            publicYear1Select.innerHTML = '';
-            publicYear2Select.innerHTML = '';
-            
-            if (years.length === 0) {
-                // ไม่มีข้อมูลสถิติ - ไม่ต้องแสดง error
-                console.log('ยังไม่มีข้อมูลสถิติในระบบ');
-                mockStatsData = {
-                    "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                    "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-                };
-                
-                // เพิ่มตัวเลือกปีเริ่มต้น
-                publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
-                publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
-            } else {
-                // มีข้อมูลสถิติ - แสดงข้อมูลจริง
-                years.forEach(year => {
-                    publicYear1Select.add(new Option(`พ.ศ. ${year}`, year));
-                    publicYear2Select.add(new Option(`พ.ศ. ${year}`, year));
-                });
-                
-                if (years.length > 0) {
-                    publicYear2Select.value = years[0];
-                }
-                if (years.length > 1) {
-                    publicYear1Select.value = years[1];
-                } else {
-                    publicYear1Select.value = years[0];
                 }
             }
-
-            renderStatsChart();
-        } else {
-            // ไม่ต้องแสดง error ถ้ายังไม่มีข้อมูล
-            console.log('ยังไม่มีข้อมูลสถิติในระบบ:', result.error);
-            mockStatsData = {
-                "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            };
-            
-            // เพิ่มตัวเลือกปีเริ่มต้น
-            publicYear1Select.innerHTML = '';
-            publicYear2Select.innerHTML = '';
-            publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
-            publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
-            
-            renderStatsChart();
         }
-    } catch (error) {
-        // ไม่ต้องแสดง error alert - แค่ log ใน console
-        console.log('ยังไม่มีข้อมูลสถิติในระบบ:', error.message);
-        
-        // ใช้ข้อมูลว่าง
-        mockStatsData = {
-            "2567": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            "2566": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        };
-        
-        // เพิ่มตัวเลือกปีเริ่มต้น
-        publicYear1Select.innerHTML = '';
-        publicYear2Select.innerHTML = '';
-        publicYear1Select.add(new Option('พ.ศ. 2566', '2566'));
-        publicYear2Select.add(new Option('พ.ศ. 2567', '2567'));
-        
-        renderStatsChart();
+    });
+
+    // ถ้าไม่มีข้อมูลจริง ให้ซ่อนกราฟหรือแสดงข้อความ
+    if (!hasData) {
+        // สามารถเพิ่มข้อความ "ยังไม่มีข้อมูล" ได้ที่นี่ถ้าต้องการ
+        console.log('ยังไม่มีข้อมูลสถิติในระบบ');
     }
 }
 
-            // การจัดการล็อกอิน
-            adminLoginBtn.addEventListener('click', function() {
-                loginModal.classList.remove('hidden');
-            });
-
-            cancelLogin.addEventListener('click', function() {
-                loginModal.classList.add('hidden');
-            });
-
-            loginForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-
-                try {
-                    const result = await callGASPost('login', {
-                        username: username,
-                        password: password
-                    });
-
-                    if (result.success) {
-                        loginModal.classList.add('hidden');
-                        dashboardPage.classList.add('hidden');
-                        adminDashboard.classList.remove('hidden');
-                        loginForm.reset();
-                        showAlert('เข้าสู่ระบบสำเร็จ', 'สำเร็จ');
-                    } else {
-                        showAlert(result.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'ล็อกอินไม่สำเร็จ');
-                    }
-                } catch (error) {
-                    showAlert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'ล็อกอินไม่สำเร็จ');
-                }
-            });
-
-            // การจัดการล็อกเอาต์
-            logoutBtn.addEventListener('click', function() {
-                adminDashboard.classList.add('hidden');
-                dashboardPage.classList.remove('hidden');
-                updateStatsData();
-                showAlert('ออกจากระบบสำเร็จ', 'สำเร็จ');
-            });
-
-            // การสลับแท็บในแดชบอร์ดผู้ดูแล
-            adminSearchTab.addEventListener('click', function() {
-                adminSearchSection.classList.remove('hidden');
-                adminUploadSection.classList.add('hidden');
-                adminChangePasswordSection.classList.add('hidden');
-                
-                adminSearchTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminUploadTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminChangePasswordTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-            });
-
-            adminUploadTab.addEventListener('click', function() {
-                adminSearchSection.classList.add('hidden');
-                adminUploadSection.classList.remove('hidden');
-                adminChangePasswordSection.classList.add('hidden');
-
-                adminUploadTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminSearchTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminChangePasswordTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-            });
-
-            adminChangePasswordTab.addEventListener('click', function() {
-                adminSearchSection.classList.add('hidden');
-                adminUploadSection.classList.add('hidden');
-                adminChangePasswordSection.classList.remove('hidden'); 
-
-                adminChangePasswordTab.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminSearchTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                adminUploadTab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-            });
-
-            // การจัดการการอัพโหลดไฟล์
-            adminFileDropArea.addEventListener('click', () => adminFileInput.click());
-            
-            adminFileDropArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                adminFileDropArea.classList.add('active');
-            });
-            
-            adminFileDropArea.addEventListener('dragleave', () => {
-                adminFileDropArea.classList.remove('active');
-            });
-            
-            adminFileDropArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                adminFileDropArea.classList.remove('active');
-                
-                if (e.dataTransfer.files.length) {
-                    handleFileSelect(e.dataTransfer.files[0]);
-                }
-            });
-            
-            adminFileInput.addEventListener('change', (e) => {
-                if (e.target.files.length) {
-                    handleFileSelect(e.target.files[0]);
-                }
-            });
-            
-            function handleFileSelect(file) {
-                if (file.type !== 'application/pdf') {
-                    showAlert('กรุณาเลือกไฟล์ PDF เท่านั้น', 'ไฟล์ไม่ถูกต้อง');
-                    return;
-                }
-                
-                selectedFile = file;
-                adminFileName.textContent = `ไฟล์ที่เลือก: ${file.name}`;
-            }
-
-            // Helper function to convert file to Base64
-            function fileToBase64(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = error => reject(error);
-                });
-            }
-
-            // การจัดการประเภทการดำเนินการ
-            function toggleRelatedPersons() {
-                if (adminActionNotify.checked) {
-                    adminRelatedPersonsGroup.style.display = 'block';
-                    document.getElementById('adminRelatedPersons').required = true;
-                } else {
-                    adminRelatedPersonsGroup.style.display = 'none';
-                    document.getElementById('adminRelatedPersons').required = false;
-                }
-            }
-            
-            adminActionNotify.addEventListener('change', toggleRelatedPersons);
-            adminActionPublicize.addEventListener('change', toggleRelatedPersons);
-
-            // การจัดการฟอร์มเปลี่ยนรหัสผ่าน
-            changePasswordForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                const oldPassword = document.getElementById('adminOldPassword').value;
-                const newPassword = document.getElementById('adminNewPassword').value;
-                const confirmPassword = document.getElementById('adminConfirmPassword').value;
-
-                if (newPassword !== confirmPassword) {
-                    showAlert('รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน', 'ข้อผิดพลาด');
-                    return;
-                }
-
-                if (newPassword.length < 6) {
-                    showAlert('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร', 'ข้อผิดพลาด');
-                    return;
-                }
-
-                changePasswordSubmitBtn.disabled = true;
-
-                try {
-                    const result = await callGASPost('changePassword', {
-                        oldPassword: oldPassword,
-                        newPassword: newPassword
-                    });
-
-                    if (result.success) {
-                        showAlert(result.message || 'เปลี่ยนรหัสผ่านสำเร็จ', 'สำเร็จ');
-                        changePasswordForm.reset();
-                    } else {
-                        showAlert(result.error || 'เกิดข้อผิดพลาด', 'ไม่สำเร็จ');
-                    }
-                } catch (error) {
-                    showAlert(`เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`, 'ไม่สำเร็จ');
-                } finally {
-                    changePasswordSubmitBtn.disabled = false;
-                }
-            });
-
-            // การจัดการฟอร์มอัพโหลด
-            adminUploadForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                if (!selectedFile) {
-                    showAlert('กรุณาเลือกไฟล์ PDF', 'ข้อมูลไม่ครบถ้วน');
-                    return;
-                }
-
-                adminUploadSubmitBtn.disabled = true;
-
-                try {
-                    const fileData = await fileToBase64(selectedFile);
-
-                    const result = await callGASPost('uploadFile', {
-                        fileName: selectedFile.name,
-                        fileData: fileData,
-                        documentNumber: document.getElementById('adminDocumentNumber').value,
-                        title: document.getElementById('adminTitle').value,
-                        details: document.getElementById('adminDetails').value,
-                        actionType: document.querySelector('input[name="adminActionType"]:checked').value,
-                        relatedPersons: document.getElementById('adminRelatedPersons').value
-                    });
-
-                    if (result.success) {
-                        showAlert(result.message || 'อัพโหลดไฟล์และบันทึกข้อมูลสำเร็จ!', 'สำเร็จ');
-                        adminUploadForm.reset();
-                        adminFileName.textContent = '';
-                        selectedFile = null;
-                        toggleRelatedPersons();
-                        
-                        adminSearchTab.click();
-                    } else {
-                        throw new Error(result.error || 'เกิดข้อผิดพลาดในการอัพโหลด');
-                    }
-                } catch (error) {
-                    showAlert(`เกิดข้อผิดพลาด: ${error.message}`, 'อัพโหลดไม่สำเร็จ');
-                } finally {
-                    adminUploadSubmitBtn.disabled = false;
-                }
-            });
-
-            // การจัดการการค้นหาในแดชบอร์ดหลัก
-            searchBtn.addEventListener('click', function() {
-                const searchInput = document.getElementById('searchInput').value;
-                const searchType = document.querySelector('input[name="searchType"]:checked').value;
-                performSearch(searchInput, searchType);
-            });
-
-            // การจัดการการค้นหาในแดชบอร์ดผู้ดูแล
-            adminSearchBtn.addEventListener('click', function() {
-                const searchInput = document.getElementById('adminSearchInput').value;
-                const searchType = document.querySelector('input[name="adminSearchType"]:checked').value;
-                performSearch(searchInput, searchType);
-            });
-
-            publicUpdateStatsBtn.addEventListener('click', renderStatsChart);
-
-            // เรียกใช้ฟังก์ชันเริ่มต้น
-            toggleRelatedPersons();
-            updateStatsData();
-        });
+// Helper function to convert file to Base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
     </script>
 </body>
 </html>
