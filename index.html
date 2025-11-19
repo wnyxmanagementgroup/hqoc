@@ -3,750 +3,777 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดเก็บหนังสือเข้า</title>
+    <title>ระบบจัดเก็บหนังสือเข้าอิเล็กทรอนิกส์</title>
+    
+    <!-- Google Fonts: Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
     <style>
-        body { font-family: 'Sarabun', sans-serif; }
-        .glass {
-            background: rgba(255, 255, 255, 0.25);
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f3f4f6;
+            background-image: radial-gradient(at 40% 20%, hsla(253,100%,90%,1) 0px, transparent 50%),
+                              radial-gradient(at 80% 0%, hsla(189,100%,92%,1) 0px, transparent 50%),
+                              radial-gradient(at 0% 50%, hsla(341,100%,92%,1) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
         }
-        .glass-dark {
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .loading-overlay {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #3D449A 0%, #5B63D1 100%);
-            transition: all 0.3s ease;
+        /* Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #4f46e5;
+            width: 40px;
+            height: 40px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
         }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(61, 68, 154, 0.3);
-        }
-        .file-drop-area.active {
-            border-color: #3D449A;
-            background-color: rgba(61, 68, 154, 0.05);
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body class="p-4 sm:p-8 min-h-screen bg-gradient-to-br from-pink-100 to-blue-200 antialiased">
-    
-    <!-- หน้าแดชบอร์ดหลัก -->
-    <div id="dashboardPage">
-        <header class="glass mb-8 p-6">
-            <div class="flex flex-col md:flex-row md:items-center justify-between">
-                <div class="flex items-center justify-center mb-4 md:mb-0 md:justify-start">
-                    <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" alt="Logo" class="h-20 w-auto">
+<body class="text-gray-800 min-h-screen flex flex-col">
+
+    <!-- ================= CONFIGURATION ================= -->
+    <script>
+        // !!! สำคัญ: วาง URL จาก Google Apps Script Deployment ตรงนี้ !!!
+        // ถ้ายังไม่วาง จะใช้ข้อมูลจำลอง (Mock Data) แทน
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxH5NUBgtakhLPYlWCGIdwg1ddTWyJ-Im2p28rQip1FP_cdftrCwdIEt1xqVVO8XSrU/exec'; 
+    </script>
+
+    <!-- ================= NOTIFICATION TOAST ================= -->
+    <div id="toast" class="fixed top-5 right-5 transform translate-x-full transition-transform duration-300 z-50">
+        <div class="bg-white border-l-4 border-green-500 shadow-lg rounded-lg p-4 flex items-center">
+            <div id="toastIcon" class="mr-3 text-2xl"></div>
+            <div>
+                <h4 class="font-bold text-gray-800" id="toastTitle"></h4>
+                <p class="text-sm text-gray-600" id="toastMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= LOADING OVERLAY ================= -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[60] hidden flex-col items-center justify-center loading-overlay">
+        <div class="loader mb-4"></div>
+        <p class="text-indigo-700 font-semibold animate-pulse" id="loadingText">กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <!-- ================= PUBLIC VIEW ================= -->
+    <div id="publicView" class="flex-grow flex flex-col transition-opacity duration-300">
+        <!-- Header -->
+        <header class="glass-header sticky top-0 z-30 shadow-sm">
+            <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <!-- Logo Image Updated -->
+                    <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" alt="Logo" class="h-14 w-auto object-contain">
                 </div>
-                <div class="flex items-center justify-center md:justify-end">
-                    <button id="adminLoginBtn" class="px-4 py-2 btn-primary text-white rounded-lg font-semibold">เข้าสู่ระบบ (ผู้ดูแล)</button>
-                </div>
+                <button onclick="toggleLoginModal(true)" class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 bg-white/50 hover:bg-white px-4 py-2 rounded-full border border-gray-200 transition-all">
+                    <i class="ph-bold ph-user-circle text-lg"></i>
+                    <span>เจ้าหน้าที่</span>
+                </button>
             </div>
         </header>
 
-        <!-- ส่วนค้นหา -->
-        <div class="glass p-6 mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">ค้นหาหนังสือราชการ</h2>
-            <div class="mb-4">
-                <div class="flex flex-wrap gap-4">
-                    <div class="flex items-center">
-                        <input type="radio" id="searchByDocNo" name="searchType" value="docNo" class="mr-2" checked>
-                        <label for="searchByDocNo" class="text-gray-700">ค้นหาตามเลขที่หนังสือ</label>
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8 flex-grow">
+            <!-- Search Hero Section -->
+            <div class="text-center mb-10 mt-4">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-3">ค้นหาหนังสือราชการ</h2>
+                
+                <!-- Connection Status Indicator -->
+                <div id="connectionStatus" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-6 bg-gray-100 text-gray-500">
+                    <div class="w-2 h-2 rounded-full bg-gray-400"></div> โหมดจำลองข้อมูล (ยังไม่เชื่อมต่อ)
+                </div>
+
+                <div class="max-w-3xl mx-auto glass-panel p-2 rounded-2xl flex flex-col md:flex-row gap-2 shadow-lg">
+                    <div class="relative flex-grow group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="ph-bold ph-magnifying-glass text-gray-400 group-focus-within:text-indigo-500"></i>
+                        </div>
+                        <input type="text" id="publicSearchInput" 
+                            class="block w-full pl-10 pr-3 py-3 border-none rounded-xl bg-transparent focus:ring-2 focus:ring-indigo-200 focus:bg-white/50 transition-all placeholder-gray-400" 
+                            placeholder="พิมพ์เลขที่หนังสือ หรือ ชื่อเรื่อง..." 
+                            onkeyup="filterDocuments('public')">
                     </div>
-                    <div class="flex items-center">
-                        <input type="radio" id="searchByTitle" name="searchType" value="title" class="mr-2">
-                        <label for="searchByTitle" class="text-gray-700">ค้นหาตามชื่อเรื่อง</label>
+                    <div class="flex items-center gap-2 px-2 justify-center md:justify-start py-2 md:py-0 border-t md:border-t-0 md:border-l border-gray-200">
+                        <label class="flex items-center cursor-pointer gap-2 text-sm text-gray-600 hover:text-indigo-600">
+                            <input type="radio" name="publicSearchType" value="all" checked onchange="filterDocuments('public')" class="accent-indigo-600">
+                            ทั้งหมด
+                        </label>
+                        <label class="flex items-center cursor-pointer gap-2 text-sm text-gray-600 hover:text-indigo-600">
+                            <input type="radio" name="publicSearchType" value="docNo" onchange="filterDocuments('public')" class="accent-indigo-600">
+                            เลขที่
+                        </label>
                     </div>
+                    <button onclick="filterDocuments('public')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-semibold transition-colors shadow-md">
+                        ค้นหา
+                    </button>
                 </div>
             </div>
-            <div class="flex flex-col sm:flex-row gap-4">
-                <input type="text" id="searchInput" class="flex-grow px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกคำค้นหา...">
-                <button id="searchBtn" class="btn-primary text-white px-6 py-3 rounded-lg font-semibold whitespace-nowrap">ค้นหา</button>
-            </div>
-            
-            <!-- ผลการค้นหา -->
-            <div id="searchResults" class="mt-6 hidden">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">ผลการค้นหา</h3>
-                <div class="bg-white bg-opacity-70 rounded-lg p-4">
-                    <table class="w-full">
+
+            <!-- Results Table -->
+            <div class="glass-panel rounded-2xl overflow-hidden shadow-sm">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white/40">
+                    <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                        <i class="ph-fill ph-list-dashes text-indigo-500"></i> รายการล่าสุด
+                    </h3>
+                    <div class="flex items-center gap-2">
+                        <button onclick="loadDocuments()" class="text-indigo-600 hover:text-indigo-800 text-sm flex items-center gap-1" title="รีเฟรชข้อมูล">
+                            <i class="ph-bold ph-arrows-clockwise"></i> รีเฟรช
+                        </button>
+                        <span class="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-500 rounded-md" id="publicCount">0 รายการ</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="border-b">
-                                <th class="text-left py-2">เลขที่หนังสือ</th>
-                                <th class="text-left py-2">ชื่อเรื่อง</th>
-                                <th class="text-left py-2">วันที่</th>
-                                <th class="text-left py-2">สถานะ</th>
+                            <tr class="text-gray-500 text-sm border-b border-gray-200 bg-gray-50/50">
+                                <th class="p-4 font-medium w-32">วันที่รับ</th>
+                                <th class="p-4 font-medium w-40">เลขที่หนังสือ</th>
+                                <th class="p-4 font-medium">เรื่อง</th>
+                                <th class="p-4 font-medium w-40 text-center">การดำเนินการ</th>
+                                <th class="p-4 font-medium w-24 text-center">ไฟล์</th>
                             </tr>
                         </thead>
-                        <tbody id="searchResultsBody">
-                            <!-- ผลการค้นหาจะแสดงที่นี่ -->
+                        <tbody id="publicTableBody" class="text-sm text-gray-700">
+                            <!-- Javascript renders rows here -->
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
+        </main>
 
-        <!-- สถิติ -->
-        <div class="glass p-6 mb-8">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">สถิติหนังสือเข้ารายเดือน</h2>
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <label for="publicYear1Select" class="text-gray-700 whitespace-nowrap">เปรียบเทียบ:</label>
-                        <select id="publicYear1Select" class="px-3 py-2 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="2566">พ.ศ. 2566</option>
-                            <option value="2567">พ.ศ. 2567</option>
-                        </select>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <label for="publicYear2Select" class="text-gray-700">กับ:</label>
-                        <select id="publicYear2Select" class="px-3 py-2 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="2566">พ.ศ. 2566</option>
-                            <option value="2567" selected>พ.ศ. 2567</option>
-                        </select>
-                    </div>
-                </div>
-                <button id="publicUpdateStatsBtn" class="btn-primary text-white px-5 py-2 rounded-lg font-semibold w-full sm:w-auto">แสดงผล</button>
-            </div>
-            <div>
-                <canvas id="publicMonthlyStatsChart" class="w-full"></canvas>
-            </div>
-        </div>
+        <footer class="mt-auto py-6 text-center text-gray-400 text-sm">
+            <p>&copy; 2025 ระบบสารบรรณอิเล็กทรอนิกส์ กลุ่มบริหารงานบุคคล</p>
+            <p> พัฒนาระบบโดย ครูกีรติ ประสพพรรังสี</p>
+        </footer>
     </div>
 
-    <!-- Modal ล็อกอิน -->
-    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="w-full max-w-md mx-4">
-            <div class="glass p-8 rounded-2xl">
-                <div class="text-center mb-8">
-                    <div class="flex justify-center mb-4">
-                        <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" alt="Logo" class="h-24 w-auto">
+    <!-- ================= ADMIN VIEW ================= -->
+    <div id="adminView" class="hidden min-h-screen flex flex-col bg-gray-50">
+        <!-- Admin Header -->
+        <header class="bg-white shadow-sm sticky top-0 z-30">
+            <div class="flex justify-between items-center px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white">
+                        <i class="ph-bold ph-shield-check"></i>
                     </div>
-                    <p class="text-gray-600 mt-2">ส่วนผู้ดูแลระบบ</p>
+                    <span class="font-bold text-gray-700">Admin Page</span>
                 </div>
-                <form id="loginForm">
-                    <div class="mb-6">
-                        <label for="username" class="block text-gray-700 mb-2 font-medium">ชื่อผู้ใช้</label>
-                        <input type="text" id="username" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกชื่อผู้ใช้" required>
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden md:block">
+                        <p class="text-sm font-bold text-gray-700">เจ้าหน้าที่ สารบรรณ</p>
+                        <p class="text-xs text-gray-500">Admin Access</p>
                     </div>
-                    <div class="mb-6">
-                        <label for="password" class="block text-gray-700 mb-2 font-medium">รหัสผ่าน</label>
-                        <input type="password" id="password" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกรหัสผ่าน" required>
-                    </div>
-                    <div class="flex space-x-4">
-                        <button type="button" id="cancelLogin" class="flex-1 px-4 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition">ยกเลิก</button>
-                        <button type="submit" class="flex-1 btn-primary text-white py-3 rounded-lg font-semibold shadow-lg">เข้าสู่ระบบ</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- แดชบอร์ดผู้ดูแล -->
-    <div id="adminDashboard" class="hidden">
-        <header class="glass mb-8 p-6">
-            <div class="flex flex-col md:flex-row md:items-center justify-between">
-                <div class="flex items-center justify-center mb-4 md:mb-0 md:justify-start">
-                    <img src="https://img5.pic.in.th/file/secure-sv1/WNY-App-.png" alt="Logo" class="h-20 w-auto">
-                </div>
-                <div class="flex items-center justify-center md:justify-end">
-                    <span class="text-gray-700 mr-4 hidden sm:inline">ผู้ดูแลระบบ</span>
-                    <button id="logoutBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">ออกจากระบบ</button>
+                    <button onclick="handleLogout()" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="ออกจากระบบ">
+                        <i class="ph-bold ph-sign-out text-xl"></i>
+                    </button>
                 </div>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- เมนูด้านซ้าย -->
-            <div class="lg:col-span-1">
-                <div class="glass p-6 mb-8">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">เมนูการทำงาน</h2>
-                    <ul class="space-y-2">
-                        <li><button id="adminSearchTab" class="w-full text-left px-4 py-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 text-indigo-600 font-medium flex items-center">🔍 ค้นหาหนังสือ</button></li>
-                        <li><button id="adminUploadTab" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition text-gray-700 flex items-center">📤 อัพโหลดหนังสือ</button></li>
-                        <li><button id="adminChangePasswordTab" class="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition text-gray-700 flex items-center">🔒 เปลี่ยนรหัสผ่าน</button></li>
-                    </ul>
+        <div class="flex flex-grow overflow-hidden">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col">
+                <div class="p-4">
+                    <button onclick="switchAdminTab('dashboard')" id="btn-tab-dashboard" class="w-full text-left px-4 py-3 rounded-xl bg-indigo-50 text-indigo-700 font-semibold mb-2 flex items-center gap-3 transition-all">
+                        <i class="ph-fill ph-squares-four text-lg"></i> แดชบอร์ด
+                    </button>
+                    <button onclick="switchAdminTab('upload')" id="btn-tab-upload" class="w-full text-left px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 font-medium flex items-center gap-3 transition-all">
+                        <i class="ph-bold ph-upload-simple text-lg"></i> ลงรับหนังสือ
+                    </button>
                 </div>
-            </div>
+                <div class="mt-auto p-6 border-t border-gray-100">
+                    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4 text-white shadow-lg">
+                        <h4 class="font-bold text-lg mb-1" id="statTotal">0</h4>
+                        <p class="text-indigo-100 text-xs">หนังสือทั้งหมดในระบบ</p>
+                    </div>
+                </div>
+            </aside>
 
-            <!-- เนื้อหาหลัก -->
-            <div class="lg:col-span-2">
-                <!-- ส่วนค้นหา -->
-                <div id="adminSearchSection">
-                    <div class="glass p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">ค้นหาหนังสือราชการ</h2>
-                        <div class="mb-4">
-                            <div class="flex flex-wrap gap-4">
-                                <div class="flex items-center">
-                                    <input type="radio" id="adminSearchByDocNo" name="adminSearchType" value="docNo" class="mr-2" checked>
-                                    <label for="adminSearchByDocNo" class="text-gray-700">ค้นหาตามเลขที่หนังสือ</label>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="radio" id="adminSearchByTitle" name="adminSearchType" value="title" class="mr-2">
-                                    <label for="adminSearchByTitle" class="text-gray-700">ค้นหาตามชื่อเรื่อง</label>
-                                </div>
-                            </div>
+            <!-- Admin Content -->
+            <main class="flex-grow p-6 overflow-y-auto">
+                
+                <!-- Dashboard Tab -->
+                <div id="admin-tab-dashboard" class="space-y-6">
+                    <div class="flex justify-between items-end mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">จัดการหนังสือเข้า</h2>
+                            <p class="text-gray-500 text-sm">รายการทั้งหมดจากฐานข้อมูล</p>
                         </div>
-                        <div class="flex flex-col sm:flex-row gap-4">
-                            <input type="text" id="adminSearchInput" class="flex-grow px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกคำค้นหา...">
-                            <button id="adminSearchBtn" class="btn-primary text-white px-6 py-3 rounded-lg font-semibold whitespace-nowrap">ค้นหา</button>
+                        <button onclick="switchAdminTab('upload')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm md:hidden">
+                            <i class="ph-bold ph-plus"></i> เพิ่มใหม่
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex gap-4">
+                        <div class="relative flex-grow">
+                            <i class="ph-bold ph-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
+                            <input type="text" id="adminSearchInput" onkeyup="filterDocuments('admin')" class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="ค้นหา...">
                         </div>
-                        
-                        <!-- ผลการค้นหาสำหรับผู้ดูแล -->
-                        <div id="adminSearchResults" class="mt-6 hidden">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">ผลการค้นหา</h3>
-                            <div class="bg-white bg-opacity-70 rounded-lg p-4">
-                                <table class="w-full">
-                                    <thead>
-                                        <tr class="border-b">
-                                            <th class="text-left py-2">เลขที่หนังสือ</th>
-                                            <th class="text-left py-2">ชื่อเรื่อง</th>
-                                            <th class="text-left py-2">วันที่</th>
-                                            <th class="text-left py-2">จัดการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="adminSearchResultsBody">
-                                        <!-- ผลการค้นหาจะแสดงที่นี่ -->
-                                    </tbody>
-                                </table>
-                            </div>
+                        <select id="adminSearchFilter" onchange="filterDocuments('admin')" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-gray-50 focus:outline-none">
+                            <option value="all">ทั้งหมด</option>
+                            <option value="notify">แจ้งผู้เกี่ยวข้อง</option>
+                            <option value="public">ประชาสัมพันธ์</option>
+                        </select>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4 font-semibold">เลขที่หนังสือ</th>
+                                        <th class="p-4 font-semibold">ชื่อเรื่อง</th>
+                                        <th class="p-4 font-semibold">สถานะ</th>
+                                        <th class="p-4 font-semibold text-center">ไฟล์</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTableBody" class="text-sm divide-y divide-gray-100">
+                                    <!-- JS Render -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- ส่วนอัพโหลด -->
-                <div id="adminUploadSection" class="hidden">
-                    <div class="glass p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-6">อัพโหลดหนังสือใหม่</h2>
-                        <form id="adminUploadForm">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <div>
-                                    <label for="adminDocumentNumber" class="block text-gray-700 mb-2 font-medium">เลขที่หนังสือราชการ *</label>
-                                    <input type="text" id="adminDocumentNumber" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกเลขที่หนังสือ" required>
-                                </div>
-                                <div>
-                                    <label for="adminTitle" class="block text-gray-700 mb-2 font-medium">ชื่อเรื่อง *</label>
-                                    <input type="text" id="adminTitle" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกชื่อเรื่อง" required>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <div>
-                                    <label for="adminDate" class="block text-gray-700 mb-2 font-medium">วันที่ *</label>
-                                    <input type="date" id="adminDate" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" required>
-                                </div>
-                                <div>
-                                    <label for="adminDepartment" class="block text-gray-700 mb-2 font-medium">หน่วยงาน *</label>
-                                    <select id="adminDepartment" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" required>
-                                        <option value="">เลือกหน่วยงาน</option>
-                                        <option value="บริหารงานบุคคล">บริหารงานบุคคล</option>
-                                        <option value="บริหารวิชาการ">บริหารวิชาการ</option>
-                                        <option value="บริหารทั่วไป">บริหารทั่วไป</option>
-                                        <option value="บริหารงบประมาณ">บริหารงบประมาณ</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="mb-6">
-                                <label for="adminDetails" class="block text-gray-700 mb-2 font-medium">รายละเอียดอื่นๆ</label>
-                                <textarea id="adminDetails" rows="3" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="กรอกรายละเอียดเพิ่มเติม"></textarea>
-                            </div>
-                            <div class="mb-6">
-                                <label for="adminFile" class="block text-gray-700 mb-2 font-medium">ไฟล์เอกสาร (PDF)</label>
-                                <input type="file" id="adminFile" accept=".pdf" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
-                            </div>
-                            <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-semibold shadow-lg">บันทึกข้อมูล</button>
-                        </form>
+                <!-- Upload Tab -->
+                <div id="admin-tab-upload" class="hidden max-w-4xl mx-auto">
+                    <div class="flex items-center gap-2 mb-6">
+                        <button onclick="switchAdminTab('dashboard')" class="text-gray-400 hover:text-gray-600"><i class="ph-bold ph-arrow-left text-xl"></i></button>
+                        <h2 class="text-2xl font-bold text-gray-800">ลงรับหนังสือใหม่</h2>
                     </div>
+
+                    <form id="uploadForm" onsubmit="handleUpload(event)" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">เลขที่หนังสือ <span class="text-red-500">*</span></label>
+                                <input type="text" name="docNo" required class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors" placeholder="เช่น ศธ 04009/ว...">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ลงวันที่ <span class="text-red-500">*</span></label>
+                                <input type="date" name="date" required class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors">
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อเรื่อง <span class="text-red-500">*</span></label>
+                            <input type="text" name="title" required class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors" placeholder="ระบุชื่อเรื่อง...">
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">รายละเอียด (ถ้ามี)</label>
+                            <textarea name="details" rows="3" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors"></textarea>
+                        </div>
+
+                        <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 mb-6">
+                            <label class="block text-sm font-bold text-gray-700 mb-3">การดำเนินการ</label>
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <label class="inline-flex items-center cursor-pointer bg-white px-4 py-2 rounded-lg border border-gray-200 hover:border-indigo-300 shadow-sm">
+                                    <input type="radio" name="actionType" value="notify" checked onchange="toggleRelatedPersons(true)" class="accent-indigo-600 w-4 h-4">
+                                    <span class="ml-2 text-gray-700 text-sm">แจ้งผู้เกี่ยวข้อง</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer bg-white px-4 py-2 rounded-lg border border-gray-200 hover:border-indigo-300 shadow-sm">
+                                    <input type="radio" name="actionType" value="public" onchange="toggleRelatedPersons(false)" class="accent-indigo-600 w-4 h-4">
+                                    <span class="ml-2 text-gray-700 text-sm">ประชาสัมพันธ์</span>
+                                </label>
+                            </div>
+                            
+                            <div id="relatedPersonsGroup" class="mt-4 transition-all duration-300">
+                                <label class="block text-xs font-medium text-gray-500 mb-1">ระบุผู้เกี่ยวข้อง/ฝ่าย</label>
+                                <input type="text" id="relatedPersonInput" class="w-full px-4 py-2 rounded-lg border border-gray-300 text-sm" placeholder="เช่น กลุ่มบริหารงานบุคคล, คุณสมชาย">
+                            </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ไฟล์แนบ (PDF) <span class="text-red-500">*</span></label>
+                            <div id="dropZone" class="border-2 border-dashed border-indigo-200 rounded-xl p-8 text-center bg-indigo-50/50 hover:bg-indigo-50 hover:border-indigo-400 transition-all cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                                <div class="flex flex-col items-center justify-center pointer-events-none">
+                                    <i class="ph-duotone ph-cloud-arrow-up text-4xl text-indigo-400 mb-2"></i>
+                                    <p class="text-gray-600 font-medium">คลิกเพื่อเลือกไฟล์ หรือ ลากไฟล์มาวาง</p>
+                                    <p class="text-xs text-gray-400 mt-1">รองรับไฟล์ PDF ขนาดไม่เกิน 10MB</p>
+                                </div>
+                                <input type="file" id="fileInput" accept=".pdf" class="hidden" onchange="handleFileSelect(this)">
+                            </div>
+                            <p id="fileNameDisplay" class="text-sm text-indigo-600 mt-2 font-medium hidden flex items-center gap-1">
+                                <i class="ph-fill ph-file-pdf"></i> <span id="fileNameText"></span>
+                            </p>
+                        </div>
+
+                        <div class="flex gap-3 pt-4 border-t border-gray-100">
+                            <button type="button" onclick="switchAdminTab('dashboard')" class="px-6 py-3 rounded-xl text-gray-600 font-medium hover:bg-gray-100 transition-colors">ยกเลิก</button>
+                            <button type="submit" class="flex-grow px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all">บันทึกและอัพโหลด</button>
+                        </div>
+                    </form>
                 </div>
 
-                <!-- ส่วนเปลี่ยนรหัสผ่าน -->
-                <div id="adminChangePasswordSection" class="hidden">
-                    <div class="glass p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-6">เปลี่ยนรหัสผ่าน</h2>
-                        <form id="changePasswordForm">
-                            <div class="mb-6">
-                                <label for="adminOldPassword" class="block text-gray-700 mb-2 font-medium">รหัสผ่านเก่า *</label>
-                                <input type="password" id="adminOldPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" required>
-                            </div>
-                            <div class="mb-6">
-                                <label for="adminNewPassword" class="block text-gray-700 mb-2 font-medium">รหัสผ่านใหม่ *</label>
-                                <input type="password" id="adminNewPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" required>
-                            </div>
-                            <div class="mb-6">
-                                <label for="adminConfirmPassword" class="block text-gray-700 mb-2 font-medium">ยืนยันรหัสผ่านใหม่ *</label>
-                                <input type="password" id="adminConfirmPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-70 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" required>
-                            </div>
-                            <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-semibold shadow-lg">บันทึกรหัสผ่านใหม่</button>
-                        </form>
+            </main>
+        </div>
+    </div>
+
+    <!-- ================= LOGIN MODAL ================= -->
+    <div id="loginModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300" id="loginCard">
+            <div class="p-8">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                        <i class="ph-duotone ph-lock-key"></i>
                     </div>
+                    <h2 class="text-2xl font-bold text-gray-800">เข้าสู่ระบบเจ้าหน้าที่</h2>
+                    <p class="text-gray-500 text-sm">กรุณากรอกรหัสผ่านเพื่อจัดการระบบ</p>
                 </div>
+                
+                <form onsubmit="handleLogin(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้งาน</label>
+                            <div class="relative">
+                                <i class="ph-bold ph-user absolute left-3 top-3 text-gray-400"></i>
+                                <input type="text" id="username" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Admin">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                            <div class="relative">
+                                <i class="ph-bold ph-key absolute left-3 top-3 text-gray-400"></i>
+                                <input type="password" id="password" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="••••••">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="loginError" class="mt-3 text-red-500 text-sm text-center hidden">
+                        ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง
+                    </div>
+
+                    <div class="mt-8 flex gap-3">
+                        <button type="button" onclick="toggleLoginModal(false)" class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">ยกเลิก</button>
+                        <button type="submit" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-lg transition-colors">เข้าสู่ระบบ</button>
+                    </div>
+                </form>
+            </div>
+            <div class="bg-gray-50 p-3 text-center text-xs text-gray-400 border-t border-gray-100">
+                จัดทำโดยกลุ่มบริหารงานบุคคล โรงเรียนวังน้ำเย็นวิทยาคม
+            <div class="bg-gray-50 p-3 text-center text-xs text-gray-400 border-t border-gray-100">
+                พัฒนาระบบโดย ครูกีรติ ประสพพรรังสี
             </div>
         </div>
     </div>
 
-    <!-- Modal แจ้งเตือน -->
-    <div id="customAlertModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] hidden">
-        <div class="w-full max-w-md mx-4">
-            <div class="glass p-6 rounded-2xl shadow-lg">
-                <h3 id="customAlertTitle" class="text-xl font-semibold text-gray-800 mb-4">ข้อความ</h3>
-                <p id="customAlertMessage" class="text-gray-700 mb-6">นี่คือข้อความแจ้งเตือน</p>
-                <button id="customAlertCloseBtn" class="w-full btn-primary text-white py-2 rounded-lg font-semibold">ตกลง</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal โหลดข้อมูล -->
-    <div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200] hidden">
-        <div class="glass-dark p-8 rounded-2xl flex flex-col items-center">
-            <svg class="animate-spin h-10 w-10 text-white mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p class="text-white text-lg font-semibold">กำลังประมวลผล...</p>
-        </div>
-    </div>
-
-    <footer class="text-center text-sm text-gray-600 p-4 mt-8">
-        <p>จัดทำโดยกลุ่มบริหารงานบุคคล โรงเรียนวังน้ำเย็นวิทยาคม</p>
-        <p>พัฒนาระบบโดย ครูกีรติ ประสพพรรังสี</p>
-    </footer>
-
+    <!-- JAVASCRIPT -->
     <script>
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-        // ★★★ URL ของ GOOGLE APPS SCRIPT WEB APP ★★★
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMjOGrKm39x6fOH8ciiB-9ikBQlElOyUEUCx_fxbxHSO5aW9meiE7ZZBz_i9wvhdWb/exec';
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        // --- STATE & MOCK DATA ---
+        let documents = [];
+        let isLoggedIn = false;
+        let currentFile = null;
 
-        // ฟังก์ชันเรียกใช้ Google Apps Script
-        async function callGAS(action, method = 'GET', payload = {}) {
-            showLoading();
-            
-            try {
-                let url = GOOGLE_SCRIPT_URL;
-                const options = {
-                    method: method,
-                    redirect: 'follow'
-                };
+        const mockDocuments = [
+            { id: 1, docNo: "ศธ 04009/ว 1234 (ตัวอย่าง)", title: "ตัวอย่างข้อมูล (ยังไม่ได้เชื่อมต่อ Script)", date: "2023-10-01", action: "notify", detail: "แจ้งหัวหน้ากลุ่มงานทุกกลุ่ม", file: "#" },
+            { id: 2, docNo: "ศธ 04256/2566 (ตัวอย่าง)", title: "กรุณาวาง URL ของ Web App เพื่อดูข้อมูลจริง", date: "2023-10-05", action: "public", detail: "-", file: "#" },
+        ];
 
-                if (method === 'GET') {
-                    const params = new URLSearchParams({ action, ...payload });
-                    url += `?${params}`;
-                } else {
-                    options.headers = {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    };
-                    // แปลง payload เป็น form data format
-                    const formData = new URLSearchParams();
-                    formData.append('action', action);
-                    Object.keys(payload).forEach(key => {
-                        formData.append(key, payload[key]);
-                    });
-                    options.body = formData;
-                }
-
-                console.log('Calling GAS:', url, options);
-                const response = await fetch(url, options);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                // อ่าน response เป็น text ก่อน แล้วค่อย parse เป็น JSON
-                const text = await response.text();
-                let result;
-                try {
-                    result = JSON.parse(text);
-                } catch (e) {
-                    console.warn('Response is not JSON:', text);
-                    result = { success: false, error: 'รูปแบบข้อมูลตอบกลับไม่ถูกต้อง' };
-                }
-                
-                hideLoading();
-                return result;
-                
-            } catch (error) {
-                hideLoading();
-                console.error('GAS API Error:', error);
-                return {
-                    success: false,
-                    error: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: ' + error.message
-                };
-            }
-        }
-
-        // ฟังก์ชันพื้นฐาน
-        function showLoading() {
-            const loadingModal = document.getElementById('loadingModal');
-            if (loadingModal) loadingModal.classList.remove('hidden');
-        }
-
-        function hideLoading() {
-            const loadingModal = document.getElementById('loadingModal');
-            if (loadingModal) loadingModal.classList.add('hidden');
-        }
-
-        function showAlert(message, title = 'ข้อความ') {
-            const customAlertModal = document.getElementById('customAlertModal');
-            const customAlertTitle = document.getElementById('customAlertTitle');
-            const customAlertMessage = document.getElementById('customAlertMessage');
-            
-            if (customAlertTitle && customAlertMessage && customAlertModal) {
-                customAlertTitle.textContent = title;
-                customAlertMessage.textContent = message;
-                customAlertModal.classList.remove('hidden');
-            }
-        }
-
-        // ฟังก์ชันแสดงผลการค้นหา
-        function displaySearchResults(results, isAdmin = false) {
-            const resultsContainer = isAdmin ? 
-                document.getElementById('adminSearchResults') : 
-                document.getElementById('searchResults');
-            const resultsBody = isAdmin ? 
-                document.getElementById('adminSearchResultsBody') : 
-                document.getElementById('searchResultsBody');
-                
-            if (!resultsContainer || !resultsBody) return;
-            
-            if (!results || results.length === 0) {
-                resultsBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-500">ไม่พบข้อมูล</td></tr>';
-                resultsContainer.classList.remove('hidden');
-                return;
-            }
-            
-            let html = '';
-            results.forEach(doc => {
-                html += `
-                    <tr class="border-b">
-                        <td class="py-3">${doc.documentNumber || '-'}</td>
-                        <td class="py-3">${doc.title || '-'}</td>
-                        <td class="py-3">${doc.date || '-'}</td>
-                        <td class="py-3">
-                            ${isAdmin ? 
-                                `<button class="text-blue-600 hover:text-blue-800 mr-2" onclick="viewDocument('${doc.id}')">ดู</button>
-                                 <button class="text-green-600 hover:text-green-800 mr-2" onclick="editDocument('${doc.id}')">แก้ไข</button>
-                                 <button class="text-red-600 hover:text-red-800" onclick="deleteDocument('${doc.id}')">ลบ</button>` :
-                                `<span class="text-green-600">✓ มีเอกสาร</span>`
-                            }
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            resultsBody.innerHTML = html;
-            resultsContainer.classList.remove('hidden');
-        }
-
-        // ฟังก์ชันจัดการเอกสาร (สำหรับผู้ดูแล)
-        function viewDocument(id) {
-            showAlert(`ดูเอกสาร ID: ${id}`, 'ดูเอกสาร');
-        }
-
-        function editDocument(id) {
-            showAlert(`แก้ไขเอกสาร ID: ${id}`, 'แก้ไขเอกสาร');
-        }
-
-        function deleteDocument(id) {
-            if (confirm('คุณแน่ใจว่าต้องการลบเอกสารนี้?')) {
-                showAlert(`ลบเอกสาร ID: ${id}`, 'ลบเอกสาร');
-            }
-        }
-
-        // ฟังก์ชันสร้างกราฟสถิติ
-        function createMonthlyStatsChart(year1, year2) {
-            const ctx = document.getElementById('publicMonthlyStatsChart');
-            if (!ctx) return;
-            
-            // ข้อมูลตัวอย่าง - ในระบบจริงจะดึงจาก GAS
-            const data1 = [12, 19, 15, 17, 14, 16, 18, 20, 22, 19, 17, 21];
-            const data2 = [10, 15, 18, 16, 20, 22, 19, 23, 25, 22, 20, 24];
-            
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'],
-                    datasets: [
-                        {
-                            label: `พ.ศ. ${year1}`,
-                            data: data1,
-                            borderColor: 'rgb(59, 130, 246)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.3,
-                            fill: true
-                        },
-                        {
-                            label: `พ.ศ. ${year2}`,
-                            data: data2,
-                            borderColor: 'rgb(139, 92, 246)',
-                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                            tension: 0.3,
-                            fill: true
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: 'สถิติหนังสือเข้ารายเดือน'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'จำนวนหนังสือ'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // เมื่อ DOM โหลดเสร็จ
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('ระบบเริ่มทำงาน...');
-            
-            // ตั้งค่าวันที่เริ่มต้นเป็นวันปัจจุบัน
-            const today = new Date().toISOString().split('T')[0];
-            const adminDateInput = document.getElementById('adminDate');
-            if (adminDateInput) {
-                adminDateInput.value = today;
-            }
-            
-            // สร้างกราฟสถิติเริ่มต้น
-            createMonthlyStatsChart(2566, 2567);
-
-            // อีเวนต์ล็อกอิน
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const username = document.getElementById('username').value;
-                    const password = document.getElementById('password').value;
-
-                    if (!username || !password) {
-                        showAlert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
-                        return;
-                    }
-
-                    const result = await callGAS('login', 'POST', {
-                        username: username,
-                        password: password
-                    });
-
-                    if (result.success) {
-                        showAlert('เข้าสู่ระบบสำเร็จ', 'สำเร็จ');
-                        document.getElementById('loginModal').classList.add('hidden');
-                        document.getElementById('dashboardPage').classList.add('hidden');
-                        document.getElementById('adminDashboard').classList.remove('hidden');
-                        loginForm.reset();
-                    } else {
-                        showAlert(result.error || 'ล็อกอินไม่สำเร็จ', 'ข้อผิดพลาด');
-                    }
-                });
-            }
-
-            // อีเวนต์ค้นหาสำหรับผู้ใช้ทั่วไป
-            document.getElementById('searchBtn').addEventListener('click', async function() {
-                const searchType = document.querySelector('input[name="searchType"]:checked').value;
-                const searchInput = document.getElementById('searchInput').value;
-                
-                if (!searchInput) {
-                    showAlert('กรุณากรอกคำค้นหา');
-                    return;
-                }
-                
-                const result = await callGAS('search', 'GET', {
-                    type: searchType,
-                    query: searchInput
-                });
-                
-                if (result.success) {
-                    displaySearchResults(result.data);
-                } else {
-                    showAlert(result.error || 'ค้นหาไม่สำเร็จ', 'ข้อผิดพลาด');
-                }
-            });
-
-            // อีเวนต์ค้นหาสำหรับผู้ดูแล
-            document.getElementById('adminSearchBtn').addEventListener('click', async function() {
-                const searchType = document.querySelector('input[name="adminSearchType"]:checked').value;
-                const searchInput = document.getElementById('adminSearchInput').value;
-                
-                if (!searchInput) {
-                    showAlert('กรุณากรอกคำค้นหา');
-                    return;
-                }
-                
-                const result = await callGAS('search', 'GET', {
-                    type: searchType,
-                    query: searchInput
-                });
-                
-                if (result.success) {
-                    displaySearchResults(result.data, true);
-                } else {
-                    showAlert(result.error || 'ค้นหาไม่สำเร็จ', 'ข้อผิดพลาด');
-                }
-            });
-
-            // อีเวนต์อัพโหลดเอกสาร
-            const adminUploadForm = document.getElementById('adminUploadForm');
-            if (adminUploadForm) {
-                adminUploadForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const documentNumber = document.getElementById('adminDocumentNumber').value;
-                    const title = document.getElementById('adminTitle').value;
-                    const date = document.getElementById('adminDate').value;
-                    const department = document.getElementById('adminDepartment').value;
-                    const details = document.getElementById('adminDetails').value;
-                    
-                    if (!documentNumber || !title || !date || !department) {
-                        showAlert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
-                        return;
-                    }
-                    
-                    const result = await callGAS('upload', 'POST', {
-                        documentNumber: documentNumber,
-                        title: title,
-                        date: date,
-                        department: department,
-                        details: details
-                    });
-                    
-                    if (result.success) {
-                        showAlert('บันทึกข้อมูลสำเร็จ', 'สำเร็จ');
-                        adminUploadForm.reset();
-                        document.getElementById('adminDate').value = today;
-                    } else {
-                        showAlert(result.error || 'บันทึกข้อมูลไม่สำเร็จ', 'ข้อผิดพลาด');
-                    }
-                });
-            }
-
-            // อีเวนต์เปลี่ยนรหัสผ่าน
-            const changePasswordForm = document.getElementById('changePasswordForm');
-            if (changePasswordForm) {
-                changePasswordForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const oldPassword = document.getElementById('adminOldPassword').value;
-                    const newPassword = document.getElementById('adminNewPassword').value;
-                    const confirmPassword = document.getElementById('adminConfirmPassword').value;
-                    
-                    if (!oldPassword || !newPassword || !confirmPassword) {
-                        showAlert('กรุณากรอกรหัสผ่านทั้งหมด');
-                        return;
-                    }
-                    
-                    if (newPassword !== confirmPassword) {
-                        showAlert('รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน');
-                        return;
-                    }
-                    
-                    const result = await callGAS('changePassword', 'POST', {
-                        oldPassword: oldPassword,
-                        newPassword: newPassword
-                    });
-                    
-                    if (result.success) {
-                        showAlert('เปลี่ยนรหัสผ่านสำเร็จ', 'สำเร็จ');
-                        changePasswordForm.reset();
-                    } else {
-                        showAlert(result.error || 'เปลี่ยนรหัสผ่านไม่สำเร็จ', 'ข้อผิดพลาด');
-                    }
-                });
-            }
-
-            // อีเวนต์เปลี่ยนแท็บในแดชบอร์ดผู้ดูแล
-            document.getElementById('adminSearchTab').addEventListener('click', function() {
-                document.getElementById('adminSearchSection').classList.remove('hidden');
-                document.getElementById('adminUploadSection').classList.add('hidden');
-                document.getElementById('adminChangePasswordSection').classList.add('hidden');
-                
-                // อัพเดตสถานะแท็บ
-                document.querySelectorAll('#adminDashboard [id$="Tab"]').forEach(tab => {
-                    tab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                    tab.classList.add('hover:bg-gray-100', 'text-gray-700');
-                });
-                this.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                this.classList.remove('hover:bg-gray-100', 'text-gray-700');
-            });
-
-            document.getElementById('adminUploadTab').addEventListener('click', function() {
-                document.getElementById('adminSearchSection').classList.add('hidden');
-                document.getElementById('adminUploadSection').classList.remove('hidden');
-                document.getElementById('adminChangePasswordSection').classList.add('hidden');
-                
-                // อัพเดตสถานะแท็บ
-                document.querySelectorAll('#adminDashboard [id$="Tab"]').forEach(tab => {
-                    tab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                    tab.classList.add('hover:bg-gray-100', 'text-gray-700');
-                });
-                this.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                this.classList.remove('hover:bg-gray-100', 'text-gray-700');
-            });
-
-            document.getElementById('adminChangePasswordTab').addEventListener('click', function() {
-                document.getElementById('adminSearchSection').classList.add('hidden');
-                document.getElementById('adminUploadSection').classList.add('hidden');
-                document.getElementById('adminChangePasswordSection').classList.remove('hidden');
-                
-                // อัพเดตสถานะแท็บ
-                document.querySelectorAll('#adminDashboard [id$="Tab"]').forEach(tab => {
-                    tab.classList.remove('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                    tab.classList.add('hover:bg-gray-100', 'text-gray-700');
-                });
-                this.classList.add('bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'text-indigo-600');
-                this.classList.remove('hover:bg-gray-100', 'text-gray-700');
-            });
-
-            // อีเวนต์อื่นๆ
-            document.getElementById('adminLoginBtn').addEventListener('click', function() {
-                document.getElementById('loginModal').classList.remove('hidden');
-            });
-
-            document.getElementById('cancelLogin').addEventListener('click', function() {
-                document.getElementById('loginModal').classList.add('hidden');
-            });
-
-            document.getElementById('logoutBtn').addEventListener('click', function() {
-                document.getElementById('adminDashboard').classList.add('hidden');
-                document.getElementById('dashboardPage').classList.remove('hidden');
-                showAlert('ออกจากระบบสำเร็จ', 'สำเร็จ');
-            });
-
-            document.getElementById('customAlertCloseBtn').addEventListener('click', function() {
-                document.getElementById('customAlertModal').classList.add('hidden');
-            });
-
-            document.getElementById('publicUpdateStatsBtn').addEventListener('click', function() {
-                const year1 = document.getElementById('publicYear1Select').value;
-                const year2 = document.getElementById('publicYear2Select').value;
-                createMonthlyStatsChart(year1, year2);
-            });
-
-            // ทดสอบการเชื่อมต่อ
-            testConnection();
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            checkConnection();
+            setupDragAndDrop();
         });
 
-        // ทดสอบการเชื่อมต่อ
-        async function testConnection() {
-            const result = await callGAS('test', 'GET');
-            console.log('Connection test:', result);
+        function checkConnection() {
+            const statusEl = document.getElementById('connectionStatus');
+            if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.startsWith('https://script.google.com')) {
+                statusEl.innerHTML = `<div class="w-2 h-2 rounded-full bg-green-500"></div> เชื่อมต่อ Google Sheets แล้ว`;
+                statusEl.classList.remove('text-gray-500', 'bg-gray-100');
+                statusEl.classList.add('text-green-700', 'bg-green-100');
+                loadDocuments(); // Fetch Real Data
+            } else {
+                documents = mockDocuments;
+                renderPublicTable(documents);
+                updateStats();
+            }
+        }
+
+        // --- API & DATA FUNCTIONS ---
+        async function loadDocuments() {
+            if (!GOOGLE_SCRIPT_URL) return;
+            
+            toggleLoading(true, 'กำลังดึงข้อมูลจาก Google Sheets...');
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                const data = await response.json();
+                documents = data;
+                renderPublicTable(documents);
+                renderAdminTable(documents);
+                updateStats();
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', 'ไม่สามารถดึงข้อมูลได้ กรุณาตรวจสอบ URL');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Helper to read file as Base64
+        const fileToBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        async function handleUpload(e) {
+            e.preventDefault();
+            
+            if (!currentFile) {
+                showToast('error', 'กรุณาแนบไฟล์เอกสาร');
+                return;
+            }
+
+            if (!GOOGLE_SCRIPT_URL) {
+                showToast('error', 'กรุณาใส่ Script URL ก่อนทำการบันทึก');
+                return;
+            }
+
+            toggleLoading(true, 'กำลังอัพโหลดไฟล์และบันทึกข้อมูล...');
+            
+            try {
+                const formData = new FormData(e.target);
+                const fileData = await fileToBase64(currentFile);
+                
+                const relatedPerson = document.getElementById('relatedPersonInput').value;
+                let detailText = "-";
+                if (formData.get('actionType') === 'notify') {
+                    if (!relatedPerson) throw new Error('กรุณาระบุผู้เกี่ยวข้อง');
+                    detailText = `แจ้ง: ${relatedPerson}`;
+                }
+
+                const payload = {
+                    docNo: formData.get('docNo'),
+                    title: formData.get('title'),
+                    date: formData.get('date'),
+                    action: formData.get('actionType'),
+                    detail: detailText,
+                    file: {
+                        name: currentFile.name,
+                        mimeType: currentFile.type,
+                        data: fileData
+                    }
+                };
+
+                // Use 'no-cors' if needed, but standard fetch usually works with GAS Web App set to "Anyone"
+                // Note: sending POST to GAS often involves redirects which fetch handles, 
+                // but sometimes requires specific handling. We'll try standard POST.
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showToast('success', 'บันทึกข้อมูลและอัพโหลดสำเร็จ');
+                    e.target.reset();
+                    currentFile = null;
+                    document.getElementById('fileNameDisplay').classList.add('hidden');
+                    toggleRelatedPersons(true);
+                    loadDocuments(); // Reload data
+                    switchAdminTab('dashboard');
+                } else {
+                    throw new Error(result.message || 'Upload failed');
+                }
+
+            } catch (error) {
+                console.error(error);
+                showToast('error', 'เกิดข้อผิดพลาด: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // --- UI HELPERS ---
+        function toggleLoading(show, text = '') {
+            const el = document.getElementById('loadingOverlay');
+            const txt = document.getElementById('loadingText');
+            if (show) {
+                txt.innerText = text;
+                el.classList.remove('hidden');
+                el.classList.add('flex');
+            } else {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }
+        }
+
+        function showToast(type, message) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const title = document.getElementById('toastTitle');
+            const msg = document.getElementById('toastMessage');
+            
+            toast.classList.remove('border-green-500', 'border-red-500');
+            
+            if (type === 'success') {
+                toast.classList.add('border-green-500');
+                icon.innerHTML = '<i class="ph-fill ph-check-circle text-green-500"></i>';
+                title.innerText = 'สำเร็จ';
+            } else {
+                toast.classList.add('border-red-500');
+                icon.innerHTML = '<i class="ph-fill ph-warning-circle text-red-500"></i>';
+                title.innerText = 'ผิดพลาด';
+            }
+            
+            msg.innerText = message;
+            toast.classList.remove('translate-x-full');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 4000);
+        }
+
+        // --- RENDER FUNCTIONS (Same as before but adapted) ---
+        function formatDate(dateString) {
+            if (!dateString) return "-";
+            const d = new Date(dateString);
+            return isNaN(d.getTime()) ? dateString : d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function renderPublicTable(data) {
+            const tbody = document.getElementById('publicTableBody');
+            const countSpan = document.getElementById('publicCount');
+            tbody.innerHTML = '';
+            countSpan.innerText = `${data.length} รายการ`;
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">ไม่พบข้อมูล</td></tr>`;
+                return;
+            }
+
+            data.forEach(doc => {
+                const actionBadge = doc.action === 'notify' 
+                    ? `<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200 whitespace-nowrap text-ellipsis overflow-hidden max-w-[150px] inline-block" title="${doc.detail}">แจ้ง: ${doc.detail.replace('แจ้ง: ', '')}</span>`
+                    : `<span class="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold border border-green-200">ประชาสัมพันธ์</span>`;
+
+                const fileBtn = doc.file && doc.file !== '#' 
+                    ? `<a href="${doc.file}" target="_blank" class="text-indigo-500 hover:text-indigo-700 p-2 transition-colors"><i class="ph-bold ph-file-pdf text-xl"></i></a>`
+                    : `<span class="text-gray-300"><i class="ph-bold ph-file-x text-xl"></i></span>`;
+
+                const row = `
+                    <tr class="border-b border-gray-100 hover:bg-white/60 transition-colors table-row-hover">
+                        <td class="p-4 text-gray-500 whitespace-nowrap">${formatDate(doc.date)}</td>
+                        <td class="p-4 font-medium text-indigo-900 whitespace-nowrap">${doc.docNo}</td>
+                        <td class="p-4 text-gray-700 font-medium">
+                            <div class="line-clamp-2">${doc.title}</div>
+                        </td>
+                        <td class="p-4 text-center">${actionBadge}</td>
+                        <td class="p-4 text-center">${fileBtn}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function renderAdminTable(data) {
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-400">ไม่พบข้อมูล</td></tr>`;
+                return;
+            }
+
+            data.forEach(doc => {
+                const statusBadge = doc.action === 'notify'
+                    ? `<span class="w-2 h-2 rounded-full bg-blue-500 inline-block mr-2"></span>แจ้งเวียน`
+                    : `<span class="w-2 h-2 rounded-full bg-green-500 inline-block mr-2"></span>ประชาสัมพันธ์`;
+                
+                const fileLink = doc.file && doc.file !== '#' 
+                    ? `<a href="${doc.file}" target="_blank" class="text-indigo-600 hover:underline text-xs">เปิดไฟล์</a>` 
+                    : `<span class="text-gray-400 text-xs">ไม่มีไฟล์</span>`;
+
+                const row = `
+                    <tr class="hover:bg-gray-50 transition-colors group">
+                        <td class="p-4 font-medium text-gray-700">${doc.docNo}</td>
+                        <td class="p-4 text-gray-600 truncate max-w-xs" title="${doc.title}">${doc.title}</td>
+                        <td class="p-4 text-gray-500 text-xs">${statusBadge}</td>
+                        <td class="p-4 text-center">${fileLink}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').innerText = documents.length;
+        }
+
+        // --- SEARCH & FILTER ---
+        function filterDocuments(viewType) {
+            let filtered = [...documents];
+            
+            if (viewType === 'public') {
+                const searchTerm = document.getElementById('publicSearchInput').value.toLowerCase();
+                const searchType = document.querySelector('input[name="publicSearchType"]:checked').value;
+
+                filtered = filtered.filter(doc => {
+                    const docNo = (doc.docNo || "").toLowerCase();
+                    const title = (doc.title || "").toLowerCase();
+                    
+                    const matchesText = docNo.includes(searchTerm) || title.includes(searchTerm);
+                    if (searchType === 'all') return matchesText;
+                    if (searchType === 'docNo') return docNo.includes(searchTerm);
+                    return true;
+                });
+                renderPublicTable(filtered);
+            } else {
+                const searchTerm = document.getElementById('adminSearchInput').value.toLowerCase();
+                const filterType = document.getElementById('adminSearchFilter').value;
+
+                filtered = filtered.filter(doc => {
+                    const docNo = (doc.docNo || "").toLowerCase();
+                    const title = (doc.title || "").toLowerCase();
+                    
+                    const matchesText = docNo.includes(searchTerm) || title.includes(searchTerm);
+                    const matchesType = filterType === 'all' ? true : doc.action === filterType;
+                    return matchesText && matchesType;
+                });
+                renderAdminTable(filtered);
+            }
+        }
+
+        // --- DRAG & DROP UTILS ---
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+            if(!dropZone) return;
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                }, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('border-indigo-500', 'bg-indigo-100'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-indigo-500', 'bg-indigo-100'), false);
+            });
+
+            dropZone.addEventListener('drop', handleDrop, false);
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            document.getElementById('fileInput').files = files;
+            handleFileSelect(document.getElementById('fileInput'));
+        }
+
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            const display = document.getElementById('fileNameDisplay');
+            const text = document.getElementById('fileNameText');
+            
+            if (file && file.type === 'application/pdf') {
+                currentFile = file;
+                text.innerText = file.name;
+                display.classList.remove('hidden');
+            } else {
+                showToast('error', 'กรุณาเลือกไฟล์ PDF เท่านั้น');
+                currentFile = null;
+                display.classList.add('hidden');
+                input.value = ''; // clear input
+            }
+        }
+
+        // --- ADMIN TAB & LOGIN UTILS (Same as before) ---
+        function toggleLoginModal(show) {
+            const modal = document.getElementById('loginModal');
+            const card = document.getElementById('loginCard');
+            if (show) {
+                modal.classList.remove('hidden');
+                setTimeout(() => { modal.classList.remove('opacity-0'); card.classList.remove('scale-95'); }, 10);
+            } else {
+                modal.classList.add('opacity-0'); card.classList.add('scale-95');
+                setTimeout(() => { 
+                    modal.classList.add('hidden'); 
+                    document.getElementById('loginError').classList.add('hidden');
+                    document.getElementById('username').value = '';
+                    document.getElementById('password').value = '';
+                }, 300);
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (user === 'admin' && pass === 'admin1234') {
+                isLoggedIn = true;
+                toggleLoginModal(false);
+                document.getElementById('publicView').classList.add('hidden');
+                document.getElementById('adminView').classList.remove('hidden');
+                loadDocuments(); // Refresh admin data
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            isLoggedIn = false;
+            document.getElementById('adminView').classList.add('hidden');
+            document.getElementById('publicView').classList.remove('hidden');
+            loadDocuments(); // Refresh public data
+        }
+
+        function switchAdminTab(tabName) {
+            const dashTab = document.getElementById('admin-tab-dashboard');
+            const uploadTab = document.getElementById('admin-tab-upload');
+            const dashBtn = document.getElementById('btn-tab-dashboard');
+            const uploadBtn = document.getElementById('btn-tab-upload');
+
+            if (tabName === 'dashboard') {
+                dashTab.classList.remove('hidden'); uploadTab.classList.add('hidden');
+                dashBtn.classList.add('bg-indigo-50', 'text-indigo-700'); dashBtn.classList.remove('text-gray-600', 'hover:bg-gray-50');
+                uploadBtn.classList.remove('bg-indigo-50', 'text-indigo-700');
+            } else {
+                dashTab.classList.add('hidden'); uploadTab.classList.remove('hidden');
+                uploadBtn.classList.add('bg-indigo-50', 'text-indigo-700');
+                dashBtn.classList.remove('bg-indigo-50', 'text-indigo-700');
+            }
+        }
+
+        function toggleRelatedPersons(show) {
+            const group = document.getElementById('relatedPersonsGroup');
+            const input = document.getElementById('relatedPersonInput');
+            if (show) {
+                group.style.opacity = '1'; group.style.height = 'auto'; group.style.pointerEvents = 'auto'; input.required = true;
+            } else {
+                group.style.opacity = '0.5'; group.style.pointerEvents = 'none'; input.required = false; input.value = '';
+            }
         }
     </script>
 </body>
