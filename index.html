@@ -61,8 +61,7 @@
 
     <!-- ================= CONFIGURATION ================= -->
     <script>
-        // !!! สำคัญ: วาง URL จาก Google Apps Script Deployment ตรงนี้ !!!
-        // ถ้ายังไม่วาง จะใช้ข้อมูลจำลอง (Mock Data) แทน
+        // !!! สำคัญ: ตรวจสอบว่า URL นี้ตรงกับ Web App URL ล่าสุดของคุณ !!!
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxH5NUBgtakhLPYlWCGIdwg1ddTWyJ-Im2p28rQip1FP_cdftrCwdIEt1xqVVO8XSrU/exec'; 
     </script>
 
@@ -107,7 +106,7 @@
                 
                 <!-- Connection Status Indicator -->
                 <div id="connectionStatus" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-6 bg-gray-100 text-gray-500">
-                    <div class="w-2 h-2 rounded-full bg-gray-400"></div> โหมดจำลองข้อมูล (ยังไม่เชื่อมต่อ)
+                    <div class="w-2 h-2 rounded-full bg-gray-400"></div> สถานะ: กำลังตรวจสอบการเชื่อมต่อ...
                 </div>
 
                 <div class="max-w-3xl mx-auto glass-panel p-2 rounded-2xl flex flex-col md:flex-row gap-2 shadow-lg">
@@ -170,7 +169,7 @@
 
         <footer class="mt-auto py-6 text-center text-gray-400 text-sm">
             <p>&copy; 2025 ระบบสารบรรณอิเล็กทรอนิกส์ กลุ่มบริหารงานบุคคล</p>
-            <p> พัฒนาระบบโดย ครูกีรติ ประสพพรรังสี</p>
+            <p>พัฒนาระบบโดย ครูกีรติ ประสพพรรังสี</p>
         </footer>
     </div>
 
@@ -376,8 +375,6 @@
                     </div>
                 </form>
             </div>
-            <div class="bg-gray-50 p-3 text-center text-xs text-gray-400 border-t border-gray-100">
-                จัดทำโดยกลุ่มบริหารงานบุคคล โรงเรียนวังน้ำเย็นวิทยาคม
             <div class="bg-gray-50 p-3 text-center text-xs text-gray-400 border-t border-gray-100">
                 พัฒนาระบบโดย ครูกีรติ ประสพพรรังสี
             </div>
